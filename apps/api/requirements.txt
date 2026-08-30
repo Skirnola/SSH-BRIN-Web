@@ -1,0 +1,4 @@
+asyncssh==2.24.0
+fastapi==0.141.1
+pydantic-settings==2.15.0
+uvicorn[standard]==0.52.4
