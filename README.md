@@ -67,13 +67,6 @@ docker compose --env-file deploy/jetson.env up -d --build
 
 Hanya Caddy yang dipublikasikan. Container API dan web tidak membuka port langsung ke jaringan.
 
-## Catatan belajar dan operasi
-
-- **[Arsitektur dan Workflow](docs/01-BRIN-Edge-Workspace-Arsitektur-dan-Workflow.md)** — penjelasan teacher-style tentang frontend, API, Docker, SSH, Firebase, kamera, deteksi, security boundary, dan kaitannya dengan cloud engineering.
-- **[Runbook Operasional Jetson](docs/02-BRIN-Edge-Workspace-Runbook-Jetson.md)** — cara menyalakan, mematikan, memperbarui, memonitor, dan melakukan troubleshooting deployment.
-
-Kedua file menggunakan frontmatter, callout, Mermaid, dan wikilink sehingga dapat langsung dimasukkan ke Obsidian.
-
 ## Menjalankan di lokal
 
 ### 1. Tools
