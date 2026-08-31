@@ -13,9 +13,17 @@ export default defineConfig({
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
-  webServer: {
-    command: `npm run dev -- --port ${port}`,
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-  },
+  webServer: [
+    {
+      command: "cd ../api && .venv\\Scripts\\python.exe -m uvicorn app.main:app --port 8000",
+      url: "http://localhost:8000/api/v1/health",
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
+    },
+    {
+      command: `npm run dev -- --port ${port}`,
+      url: baseURL,
+      reuseExistingServer: !process.env.CI,
+    },
+  ],
 });

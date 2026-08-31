@@ -1,6 +1,7 @@
 import base64
 import json
 import re
+import shlex
 import stat
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -52,8 +53,69 @@ print(json.dumps({
 }))
 '''
 
+LIVE_STREAM_SCRIPT = r'''
+import ast, json, sys, time
+import cv2
+config = json.loads(sys.stdin.buffer.read())
+with open(config["config_path"], encoding="utf-8") as source_file:
+    tree = ast.parse(source_file.read())
+values = {}
+for node in tree.body:
+    if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+        name = node.targets[0].id
+        if name in {"CAMERA_IP", "USERNAME", "CAMERA_PASSWORD"}:
+            try:
+                value = ast.literal_eval(node.value)
+                if isinstance(value, str): values[name] = value
+            except (ValueError, TypeError):
+                pass
+if values.get("CAMERA_IP") != config["expected_ip"]:
+    raise SystemExit(5)
+from urllib.parse import quote
+channel = str(config["channel"])
+if channel not in {"101", "102"}:
+    raise SystemExit(6)
+url = f"rtsp://{values['USERNAME']}:{quote(values['CAMERA_PASSWORD'], safe='')}@{values['CAMERA_IP']}:554/Streaming/Channels/{channel}"
+capture = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
+capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+if not capture.isOpened():
+    raise SystemExit(2)
+last_sent = 0.0
+try:
+    while True:
+        ok, frame = capture.read()
+        if not ok or frame is None:
+            break
+        now = time.monotonic()
+        if now - last_sent < 0.25:
+            continue
+        last_sent = now
+        height, width = frame.shape[:2]
+        if width > 1920:
+            scale = 1920 / width
+            frame = cv2.resize(frame, (1920, int(height * scale)), interpolation=cv2.INTER_AREA)
+        encoded_ok, encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+        if not encoded_ok:
+            continue
+        image = encoded.tobytes()
+        packet = (
+            b"--frame\r\n"
+            b"Content-Type: image/jpeg\r\n"
+            + f"Content-Length: {len(image)}\r\n\r\n".encode("ascii")
+            + image
+            + b"\r\n"
+        )
+        try:
+            sys.stdout.buffer.write(packet)
+            sys.stdout.buffer.flush()
+        except BrokenPipeError:
+            break
+finally:
+    capture.release()
+'''
+
 FRAME_SCRIPT = r'''
-import ast, json, os, sys
+import ast, json, os, sys, tempfile
 import requests
 from requests.auth import HTTPDigestAuth
 config = json.loads(sys.stdin.buffer.read())
@@ -87,10 +149,22 @@ content = response.raw.read(length)
 response.close()
 if len(content) != length or not content.startswith(b"\xff\xd8"):
     raise SystemExit(4)
-temporary = "/tmp/brin-edge-camera-frame.jpg.tmp"
-with open(temporary, "wb") as frame_file:
-    frame_file.write(content)
-os.replace(temporary, "/tmp/brin-edge-camera-frame.jpg")
+frame_path = config["frame_path"]
+cache_directory = os.path.dirname(frame_path)
+os.makedirs(cache_directory, mode=0o700, exist_ok=True)
+os.chmod(cache_directory, 0o700)
+temporary = None
+try:
+    with tempfile.NamedTemporaryFile(mode="wb", dir=cache_directory, prefix=".frame-", delete=False) as frame_file:
+        temporary = frame_file.name
+        frame_file.write(content)
+    os.replace(temporary, frame_path)
+finally:
+    if temporary:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
 print(length)
 '''
 
@@ -126,9 +200,9 @@ def sanitize_text_content(content: str) -> str:
     )
 
 
-def encoded_python_command(source: str) -> str:
+def encoded_python_command(source: str, executable: str = "python3") -> str:
     payload = base64.b64encode(source.encode()).decode("ascii")
-    return f'python3 -c "import base64;exec(base64.b64decode(\'{payload}\'))"'
+    return f'exec {shlex.quote(executable)} -c "import base64;exec(base64.b64decode(\'{payload}\'))"'
 
 
 @asynccontextmanager
@@ -271,10 +345,44 @@ async def get_system_health(settings: Settings) -> SystemHealth:
     )
 
 
+async def stream_camera_mjpeg(settings: Settings) -> AsyncIterator[bytes]:
+    config_path = str(PurePosixPath(settings.jetson_workspace) / settings.camera_config_file)
+    stream_config = json.dumps(
+        {
+            "config_path": config_path,
+            "expected_ip": settings.camera_ip,
+            "channel": settings.camera_live_channel,
+        }
+    ).encode()
+    async with connect(settings) as connection:
+        process = await connection.create_process(
+            encoded_python_command(LIVE_STREAM_SCRIPT),
+            encoding=None,
+        )
+        process.stdin.write(stream_config)
+        process.stdin.write_eof()
+        try:
+            while True:
+                chunk = await process.stdout.read(65_536)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            process.terminate()
+            try:
+                await process.wait(timeout=3)
+            except (TimeoutError, asyncssh.Error):
+                process.kill()
+
+
 async def refresh_camera_frame(settings: Settings) -> bytes:
     config_path = str(PurePosixPath(settings.jetson_workspace) / settings.camera_config_file)
     frame_config = json.dumps(
-        {"config_path": config_path, "expected_ip": settings.camera_ip}
+        {
+            "config_path": config_path,
+            "expected_ip": settings.camera_ip,
+            "frame_path": settings.camera_frame_cache,
+        }
     ).encode()
     async with connect(settings) as connection:
         result = await connection.run(
@@ -288,7 +396,7 @@ async def refresh_camera_frame(settings: Settings) -> bytes:
         if result.exit_status != 0:
             raise RuntimeError("Frame kamera tidak tersedia")
         async with connection.start_sftp_client() as sftp:
-            async with sftp.open("/tmp/brin-edge-camera-frame.jpg", "rb") as frame_file:
+            async with sftp.open(settings.camera_frame_cache, "rb") as frame_file:
                 frame = await frame_file.read(5_000_001)
 
     if len(frame) > 5_000_000 or not frame.startswith(b"\xff\xd8"):
@@ -299,8 +407,8 @@ async def refresh_camera_frame(settings: Settings) -> bytes:
 async def get_cached_camera_frame(settings: Settings) -> tuple[bytes, float]:
     async with connect(settings) as connection:
         async with connection.start_sftp_client() as sftp:
-            attrs = await sftp.stat("/tmp/brin-edge-camera-frame.jpg")
-            async with sftp.open("/tmp/brin-edge-camera-frame.jpg", "rb") as frame_file:
+            attrs = await sftp.stat(settings.camera_frame_cache)
+            async with sftp.open(settings.camera_frame_cache, "rb") as frame_file:
                 frame = await frame_file.read(5_000_001)
 
     if len(frame) > 5_000_000 or not frame.startswith(b"\xff\xd8"):

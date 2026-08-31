@@ -1,4 +1,6 @@
 asyncssh==2.24.0
 fastapi==0.141.1
+google-auth[requests]==2.49.1
+httpx==0.28.1
 pydantic-settings==2.15.0
 uvicorn[standard]==0.52.4

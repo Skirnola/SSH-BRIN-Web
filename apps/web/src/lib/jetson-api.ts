@@ -42,8 +42,16 @@ export type SystemHealth = {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+async function authenticatedFetch(input: string): Promise<Response> {
+  const response = await fetch(input, { credentials: "include" });
+  if (response.status === 401 && typeof window !== "undefined") {
+    window.dispatchEvent(new Event("brin:session-expired"));
+  }
+  return response;
+}
+
 export async function listJetsonFiles(path = ""): Promise<DirectoryListing> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_URL}/api/v1/workspaces/default/files?path=${encodeURIComponent(path)}`,
   );
 
@@ -55,7 +63,7 @@ export async function listJetsonFiles(path = ""): Promise<DirectoryListing> {
 }
 
 export async function getSystemHealth(): Promise<SystemHealth> {
-  const response = await fetch(`${API_URL}/api/v1/system/health`);
+  const response = await authenticatedFetch(`${API_URL}/api/v1/system/health`);
   if (!response.ok) throw new Error("Kondisi perangkat tidak dapat dibaca");
   return response.json() as Promise<SystemHealth>;
 }
@@ -64,8 +72,23 @@ export function getCameraFrameUrl(version: number): string {
   return `${API_URL}/api/v1/cameras/main/frame?v=${version}`;
 }
 
+export function getCameraLiveUrl(session: number): string {
+  return `${API_URL}/api/v1/cameras/main/live?session=${session}`;
+}
+
+export async function getDetectionScripts(): Promise<string[]> {
+  const response = await authenticatedFetch(`${API_URL}/api/v1/detection/scripts`);
+  if (!response.ok) throw new Error("Daftar script deteksi tidak tersedia");
+  return response.json() as Promise<string[]>;
+}
+
+export function getDetectionLiveUrl(script: string, session: number): string {
+  const query = new URLSearchParams({ script, session: String(session) });
+  return `${API_URL}/api/v1/detection/live?${query.toString()}`;
+}
+
 export async function readJetsonFile(path: string): Promise<RemoteFileContent> {
-  const response = await fetch(
+  const response = await authenticatedFetch(
     `${API_URL}/api/v1/workspaces/default/file?path=${encodeURIComponent(path)}`,
   );
 

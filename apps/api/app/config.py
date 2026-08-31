@@ -1,6 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,7 +14,17 @@ class Settings(BaseSettings):
     jetson_workspace: str = "/home/jetson/BRIN RI NDIP"
     camera_ip: str = "10.21.20.52"
     camera_config_file: str = "Mobil_Pos.py"
+    camera_frame_cache: str = "/home/jetson/.cache/brin-edge/camera-frame.jpg"
+    camera_live_channel: int = 101
+    camera_max_live_viewers: int = 4
+    detection_python: str = "/home/jetson/yolo-env/bin/python"
     frontend_origin: str = "http://localhost:3000"
+    firebase_web_api_key: SecretStr
+    firebase_project_id: str
+    firebase_admin_email: str
+    auth_username: str = "admin"
+    auth_cookie_secure: bool = False
+    api_docs_enabled: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

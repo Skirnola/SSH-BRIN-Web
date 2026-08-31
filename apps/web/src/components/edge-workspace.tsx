@@ -2,11 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { getCameraFrameUrl, getSystemHealth, listJetsonFiles, readJetsonFile } from "@/lib/jetson-api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getCameraFrameUrl, getCameraLiveUrl, getDetectionLiveUrl, getDetectionScripts, getSystemHealth, listJetsonFiles, readJetsonFile } from "@/lib/jetson-api";
 import type { RemoteFileEntry } from "@/lib/jetson-api";
 import type { WorkspaceFile } from "@/lib/mock-data";
+import { useWorkspaceAuth } from "./auth-gate";
 import { Icon } from "./icon";
+import { WorkspaceTour } from "./workspace-tour";
 
 type Props = {
   files: WorkspaceFile[];
@@ -103,23 +105,41 @@ function FileButton({
 }
 
 export function EdgeWorkspace({ files, highlightedFiles }: Props) {
+  const { signOut } = useWorkspaceAuth();
   const [selectedId, setSelectedId] = useState(files[0].id);
   const [selectedRemotePath, setSelectedRemotePath] = useState<string | null>(null);
   const [remoteCode, setRemoteCode] = useState<{ path: string; html: string } | null>(null);
   const [gateOpen, setGateOpen] = useState(true);
   const [parkingOpen, setParkingOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [tourRequest, setTourRequest] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [updatedAt, setUpdatedAt] = useState("10.42 WIB");
   const [toast, setToast] = useState("");
-  const [frameVersion, setFrameVersion] = useState(() => Date.now());
+  const [frameVersion, setFrameVersion] = useState(0);
   const [frameLoading, setFrameLoading] = useState(true);
   const [frameFailed, setFrameFailed] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [detectionViewerOpen, setDetectionViewerOpen] = useState(false);
+  const [viewerMode, setViewerMode] = useState<"image" | "live">("image");
+  const [liveSession, setLiveSession] = useState(0);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [liveFailed, setLiveFailed] = useState(false);
+  const [selectedDetectionScript, setSelectedDetectionScript] = useState("");
+  const [detectionSession, setDetectionSession] = useState(0);
+  const [detectionRunning, setDetectionRunning] = useState(false);
+  const [detectionLoading, setDetectionLoading] = useState(false);
+  const [detectionFailed, setDetectionFailed] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const remoteFiles = useQuery({
     queryKey: ["jetson-files", "root"],
     queryFn: () => listJetsonFiles(),
     refetchInterval: 30_000,
+  });
+  const detectionScripts = useQuery({
+    queryKey: ["detection-scripts"],
+    queryFn: getDetectionScripts,
+    staleTime: 60_000,
   });
   const systemHealth = useQuery({
     queryKey: ["system-health"],
@@ -163,11 +183,23 @@ export function EdgeWorkspace({ files, highlightedFiles }: Props) {
   }, [remoteFile.data]);
 
   useEffect(() => {
+    if (!viewerOpen && !detectionViewerOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [viewerOpen, detectionViewerOpen]);
+
+  useEffect(() => {
     const activeTimers = timers.current;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setDrawerOpen(false);
         setNotificationsOpen(false);
+        setViewerOpen(false);
+        setDetectionViewerOpen(false);
+        setViewerMode("image");
+        setDetectionRunning(false);
+        setDetectionLoading(false);
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -207,10 +239,64 @@ export function EdgeWorkspace({ files, highlightedFiles }: Props) {
     setFrameVersion(Date.now());
   };
 
+  const openCameraViewer = () => {
+    setViewerMode("image");
+    setViewerOpen(true);
+  };
+
+  const openDetectionViewer = (script: string) => {
+    setSelectedDetectionScript(script);
+    setDetectionLoading(true);
+    setDetectionFailed(false);
+    setDetectionRunning(true);
+    setDetectionSession(Date.now());
+    setDetectionViewerOpen(true);
+  };
+
+  const closeCameraViewer = () => {
+    setViewerOpen(false);
+    setViewerMode("image");
+    setLiveLoading(false);
+  };
+
+  const closeDetectionViewer = () => {
+    setDetectionViewerOpen(false);
+    setDetectionRunning(false);
+    setDetectionLoading(false);
+  };
+
+  const selectLiveMode = () => {
+    setViewerMode("live");
+    setLiveLoading(true);
+    setLiveFailed(false);
+    setLiveSession(Date.now());
+  };
+
+  const startDetection = () => {
+    if (!selectedDetectionScript) return;
+    setDetectionLoading(true);
+    setDetectionFailed(false);
+    setDetectionRunning(true);
+    setDetectionSession(Date.now());
+  };
+
+  const stopDetection = () => {
+    setDetectionRunning(false);
+    setDetectionLoading(false);
+  };
+
+  const handleTourStepChange = useCallback((activeStep: number | null) => {
+    if (window.innerWidth <= 980) setDrawerOpen(activeStep === 0);
+  }, []);
+
   const viewingRemote = Boolean(selectedRemotePath);
   const displayPath = selectedRemotePath ?? selectedFile.path;
   const displayName = remoteFile.data?.name ?? selectedRemotePath?.split("/").at(-1) ?? selectedFile.name;
   const displayLanguage = remoteFile.data?.language ?? selectedFile.language;
+  const selectedRunnableScript = viewingRemote
+    ? detectionScripts.data?.find((script) => script === displayName)
+    : undefined;
+  const activeDetectionScript = selectedDetectionScript;
   const remoteHtml = remoteCode && remoteCode.path === remoteFile.data?.path ? remoteCode.html : "";
   const health = systemHealth.data;
   const updatedLabel = health
@@ -228,13 +314,13 @@ export function EdgeWorkspace({ files, highlightedFiles }: Props) {
         tabIndex={drawerOpen ? 0 : -1}
       />
 
-      <aside className="sidebar" aria-label="Navigasi ruang kerja">
+      <aside id="tour-workspace" className="sidebar" aria-label="Navigasi ruang kerja">
         <div className="sidebar-brand">
           <div className="brand-lockup">
             <Image className="brand-icon" src="/brin-icon.png" width={48} height={48} alt="Logo BRIN" priority />
             <div className="brand-name">
               <strong>BRIN</strong>
-              <span>Edge Workspace</span>
+              <span>Badan Riset dan Inovasi Nasional</span>
             </div>
           </div>
           <button className="sidebar-close" type="button" onClick={() => setDrawerOpen(false)} aria-label="Tutup menu">
@@ -309,6 +395,7 @@ export function EdgeWorkspace({ files, highlightedFiles }: Props) {
 
           <div className="topbar-actions">
             <span className="current-date">Minggu, 30 Agustus</span>
+            <button className="tour-launch" type="button" onClick={() => setTourRequest((value) => value + 1)} aria-label="Buka petunjuk"><Icon name="help" /><span>Petunjuk</span></button>
             <div className="notification-wrap">
               <button
                 className="icon-button"
@@ -327,22 +414,24 @@ export function EdgeWorkspace({ files, highlightedFiles }: Props) {
                 </div>
               )}
             </div>
-            <div className="avatar" aria-label="Pengguna: Iqbal Ramadhan">IR</div>
+            <button className="logout-button" type="button" onClick={() => void signOut()}>
+              <Icon name="arrow-right" /> Keluar
+            </button>
           </div>
         </header>
 
         <main className="content">
           <section className="page-intro" aria-labelledby="page-title">
             <div>
-              <p className="eyebrow">Ruang kerja / Kamera gerbang</p>
-              <h1 id="page-title">Selamat pagi, Iqbal.</h1>
-              <p className="intro-copy">Pantau perangkat edge dan jalankan analisis tanpa meninggalkan konteks berkas Anda.</p>
+              <p className="eyebrow">Ruang kerja / Kamera</p>
+              <h1 id="page-title">Selamat Datang, Admin.</h1>
+              <p className="intro-copy">Pantau perangkat edge dan jalankan analisis tanpa harus SSH terhadap perangkat edge.</p>
             </div>
             <span className={`status-label ${remoteFiles.data ? "healthy" : "pending"}`}><StatusDot /> {remoteFiles.data ? "Node terhubung" : remoteFiles.isError ? "Node tidak terhubung" : "Menghubungkan…"}</span>
           </section>
 
           <div className="dashboard-grid">
-            <section className="workspace-card" aria-labelledby="file-title">
+            <section id="tour-code" className="workspace-card" aria-labelledby="file-title">
               <div className="workspace-header">
                 <div className="breadcrumbs" aria-label="Lokasi berkas">
                   {displayPath.split("/").map((part, index, parts) => (
@@ -351,7 +440,13 @@ export function EdgeWorkspace({ files, highlightedFiles }: Props) {
                     </span>
                   ))}
                 </div>
-                <span className="read-only"><Icon name="shield" /> Hanya baca</span>
+                {selectedRunnableScript ? (
+                  <button className="run-button" type="button" onClick={() => openDetectionViewer(selectedRunnableScript)}>
+                    <Icon name="play" /> Jalankan deteksi
+                  </button>
+                ) : (
+                  <span className="read-only"><Icon name="shield" /> Hanya baca</span>
+                )}
               </div>
               <div className="file-meta">
                 <div>
@@ -360,7 +455,7 @@ export function EdgeWorkspace({ files, highlightedFiles }: Props) {
                 </div>
                 <span className="file-policy">Terlindungi oleh kebijakan workspace</span>
               </div>
-              <div className="code-viewer" tabIndex={0} aria-label={`Isi berkas ${displayName}`}>
+              <div key={displayPath} className="code-viewer" tabIndex={0} aria-label={`Isi berkas ${displayName}`}>
                 {viewingRemote ? (
                   remoteFile.isPending ? (
                     <div className="viewer-state"><Icon name="refresh" className="spinning" /><strong>Membaca berkas dari Jetson…</strong><span>Koneksi aman melalui SFTP</span></div>
@@ -428,10 +523,13 @@ export function EdgeWorkspace({ files, highlightedFiles }: Props) {
                 </article>
               </section>
 
-              <section className="panel camera-panel" aria-labelledby="camera-title">
+              <section id="tour-camera" className="panel camera-panel" aria-labelledby="camera-title">
                 <div className="panel-heading">
                   <div><p className="panel-kicker">Frame terbaru</p><h2 id="camera-title">Tampilan kamera</h2></div>
-                  <button className="refresh-button" type="button" onClick={refreshCameraFrame} aria-label="Perbarui frame kamera"><Icon name="refresh" className={frameLoading ? "spinning" : undefined} /></button>
+                  <div className="camera-actions">
+                    <button className="refresh-button" type="button" onClick={refreshCameraFrame} aria-label="Perbarui frame kamera"><Icon name="refresh" className={frameLoading ? "spinning" : undefined} /></button>
+                    <button className="refresh-button expand-button" type="button" onClick={openCameraViewer} aria-label="Perbesar tampilan kamera"><Icon name="maximize" /></button>
+                  </div>
                 </div>
                 <div className="camera-frame">
                   {/* The frame is proxied by FastAPI; the browser never receives RTSP credentials. */}
@@ -457,6 +555,124 @@ export function EdgeWorkspace({ files, highlightedFiles }: Props) {
           </div>
         </main>
       </div>
+
+      {viewerOpen && (
+        <section className="camera-viewer" role="dialog" aria-modal="true" aria-labelledby="camera-viewer-title">
+          <header className="camera-viewer-header">
+            <div className="viewer-camera-name">
+              <Image className="viewer-device-photo" src="/Camera1.jpg" width={44} height={44} alt="" />
+              <div><span>Kamera 01 · 10.21.20.52</span><h2 id="camera-viewer-title">Area parkir BRIN</h2></div>
+            </div>
+            <div className="viewer-controls">
+              <div className="viewer-mode-switch" aria-label="Mode tampilan kamera">
+                <button
+                  type="button"
+                  className={viewerMode === "image" ? "active" : undefined}
+                  aria-pressed={viewerMode === "image"}
+                  onClick={() => { setViewerMode("image"); setLiveLoading(false); }}
+                ><Icon name="image" /> Gambar</button>
+                <button
+                  type="button"
+                  className={viewerMode === "live" ? "active" : undefined}
+                  aria-pressed={viewerMode === "live"}
+                  onClick={selectLiveMode}
+                ><Icon name="video" /> Real-Time Cam</button>
+              </div>
+              <button className="viewer-close" type="button" onClick={closeCameraViewer} aria-label="Tutup tampilan kamera"><Icon name="x" /></button>
+            </div>
+          </header>
+
+          <div className="camera-viewer-stage">
+            {viewerMode === "image" ? (
+              <div className="viewer-media">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={frameFailed ? "/Camera1.jpg" : getCameraFrameUrl(frameVersion)}
+                  alt={frameFailed ? "Foto perangkat Kamera 1" : "Frame besar terbaru Kamera 1"}
+                  onLoad={() => setFrameLoading(false)}
+                  onError={() => { setFrameLoading(false); setFrameFailed(true); }}
+                />
+                {frameLoading && <div className="viewer-media-state"><Icon name="refresh" className="spinning" /><strong>Mengambil gambar terbaru…</strong></div>}
+                <div className="viewer-overlay-label"><Icon name="image" /> Diperbarui setiap 30 detik</div>
+              </div>
+            ) : (
+              <div className="viewer-media live-media">
+                {!liveFailed && (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={getCameraLiveUrl(liveSession)}
+                      alt="Real-Time Cam Kamera 1"
+                      onLoad={() => setLiveLoading(false)}
+                      onError={() => { setLiveLoading(false); setLiveFailed(true); }}
+                    />
+                  </>
+                )}
+                {liveLoading && <div className="viewer-media-state"><Icon name="refresh" className="spinning" /><strong>Menyiapkan Real-Time Cam…</strong><span>Stream utama kualitas tinggi dapat memerlukan waktu hingga 60 detik.</span></div>}
+                {liveFailed && <div className="viewer-media-state error"><Icon name="x" /><strong>Real-Time Cam tidak tersedia</strong><span>Coba kembali ke mode Gambar atau sambungkan ulang.</span><button type="button" onClick={selectLiveMode}>Sambungkan ulang</button></div>}
+                {!liveLoading && !liveFailed && <div className="viewer-overlay-label live"><StatusDot /> Real-Time Cam · Channel 101 HD</div>}
+              </div>
+            )}
+          </div>
+
+          <footer className="camera-viewer-footer">
+            <span><StatusDot /> {health?.camera.status === "online" ? "Kamera terhubung" : "Status kamera belum tersedia"}</span>
+            <span>Tekan Esc untuk menutup</span>
+          </footer>
+        </section>
+      )}
+
+      {detectionViewerOpen && (
+        <section className="camera-viewer detection-viewer" role="dialog" aria-modal="true" aria-labelledby="detection-viewer-title">
+          <header className="camera-viewer-header">
+            <div className="viewer-camera-name">
+              <span className="detection-header-icon"><Icon name="activity" /></span>
+              <div><span>{activeDetectionScript}</span><h2 id="detection-viewer-title">Deteksi kendaraan</h2></div>
+            </div>
+            <div className="viewer-controls">
+              {detectionRunning && <span className="detection-running-status"><StatusDot /> Berjalan di Jetson</span>}
+              <button className="viewer-close" type="button" onClick={closeDetectionViewer} aria-label="Tutup deteksi"><Icon name="x" /></button>
+            </div>
+          </header>
+
+          <div className="camera-viewer-stage">
+            {detectionRunning ? (
+              <div className="viewer-media detection-media">
+                {!detectionFailed && (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={getDetectionLiveUrl(activeDetectionScript, detectionSession)}
+                      alt={`Deteksi langsung ${activeDetectionScript}`}
+                      onLoad={() => setDetectionLoading(false)}
+                      onError={() => { setDetectionLoading(false); setDetectionFailed(true); }}
+                    />
+                  </>
+                )}
+                {detectionLoading && <div className="viewer-media-state"><Icon name="refresh" className="spinning" /><strong>Memuat model dan memulai deteksi…</strong><span>Script sedang dijalankan pada Jetson. Proses pertama dapat memerlukan lebih dari satu menit.</span></div>}
+                {detectionFailed && <div className="viewer-media-state error"><Icon name="x" /><strong>Deteksi tidak dapat dijalankan</strong><span>Pastikan tidak ada proses kamera atau deteksi lain yang sedang aktif.</span><button type="button" onClick={startDetection}>Coba lagi</button></div>}
+                {!detectionLoading && !detectionFailed && <div className="viewer-overlay-label live"><StatusDot /> Deteksi langsung · {activeDetectionScript}</div>}
+                <button className="stop-detection-button" type="button" onClick={stopDetection}><Icon name="x" /> Hentikan deteksi</button>
+              </div>
+            ) : (
+              <div className="detection-stopped">
+                <span className="detection-symbol"><Icon name="activity" /></span>
+                <p className="panel-kicker">Proses dihentikan</p>
+                <h3>Deteksi telah berhenti</h3>
+                <p>{activeDetectionScript} tidak lagi berjalan pada Jetson.</p>
+                <div><button className="start-detection-button" type="button" onClick={startDetection}><Icon name="play" /> Jalankan kembali</button><button className="secondary-detection-button" type="button" onClick={closeDetectionViewer}>Tutup</button></div>
+              </div>
+            )}
+          </div>
+
+          <footer className="camera-viewer-footer">
+            <span><StatusDot /> {detectionRunning ? `Menjalankan ${activeDetectionScript}` : "Deteksi dihentikan"}</span>
+            <span>Menutup tampilan akan menghentikan proses</span>
+          </footer>
+        </section>
+      )}
+
+      <WorkspaceTour request={tourRequest} onStepChange={handleTourStepChange} />
 
       <div className={`toast${toast ? " show" : ""}`} role="status" aria-live="polite">
         <span className="toast-icon"><Icon name="check" /></span>

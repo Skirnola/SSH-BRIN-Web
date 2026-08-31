@@ -1,0 +1,50 @@
+# Environment and secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+known_hosts
+
+# JavaScript / Next.js
+**/node_modules/
+**/.next/
+**/out/
+**/.turbo/
+**/.vercel/
+*.tsbuildinfo
+next-env.d.ts
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+*.py[cod]
+.coverage
+htmlcov/
+
+# Tests, reports, and runtime cache
+**/coverage/
+**/playwright-report/
+**/test-results/
+**/.cache/
+*.log
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+nul
+
+# Local screenshots and temporary files
+*.tmp
+*.local.png

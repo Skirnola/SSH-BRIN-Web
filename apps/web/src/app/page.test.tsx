@@ -1,15 +1,19 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Providers } from "./providers";
 import Home from "./page";
 
 describe("Home", () => {
-  it("menampilkan ruang kerja utama", async () => {
-    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(<QueryClientProvider client={queryClient}>{await Home()}</QueryClientProvider>);
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
+  });
 
-    expect(screen.getByRole("heading", { name: "Selamat pagi, Iqbal." })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Tampilan kamera" })).toBeInTheDocument();
-    expect(screen.getAllByText("Hanya baca").length).toBeGreaterThan(0);
+  it("meminta autentikasi sebelum menampilkan workspace", async () => {
+    render(<Providers>{await Home()}</Providers>);
+
+    expect(await screen.findByRole("heading", { name: "Login" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Nama pengguna")).toBeInTheDocument();
+    expect(screen.getByLabelText("Kata sandi")).toHaveAttribute("type", "password");
+    expect(screen.queryByRole("heading", { name: "Selamat Datang, Admin." })).not.toBeInTheDocument();
   });
 });

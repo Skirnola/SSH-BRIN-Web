@@ -17,7 +17,7 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BRIN Edge Workspace",
+  title: "BRIN Digital Twin",
   description: "Ruang kerja internal untuk memantau perangkat edge dan kamera BRIN.",
 };
 
