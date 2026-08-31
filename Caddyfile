@@ -1,0 +1,15 @@
+:80 {
+    encode zstd gzip
+
+    @api path /api/*
+    reverse_proxy @api api:8000 {
+        flush_interval -1
+    }
+
+    reverse_proxy web:3000
+
+    log {
+        output stdout
+        format console
+    }
+}

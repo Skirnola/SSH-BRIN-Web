@@ -53,6 +53,20 @@ apps/
     └── src/
 ```
 
+## Deploy dengan Docker di Jetson
+
+Repository menyertakan deployment ARM64 dengan Next.js, FastAPI, dan Caddy. Kamera serta proses deteksi tetap berjalan pada host Jetson; container API terhubung kembali melalui SSH yang dipin.
+
+Panduan lengkap: **[deploy/README.md](deploy/README.md)**
+
+```bash
+cp deploy/jetson.env.example deploy/jetson.env
+# Isi konfigurasi privat, lalu:
+docker compose --env-file deploy/jetson.env up -d --build
+```
+
+Hanya Caddy yang dipublikasikan. Container API dan web tidak membuka port langsung ke jaringan.
+
 ## Menjalankan di lokal
 
 ### 1. Tools
