@@ -126,9 +126,9 @@ npm run test:e2e
 Remove-Item Env:BRIN_E2E_PASSWORD
 ```
 
-## Keamanan dan batas kapasitas
+## Keamanan Website
 
-Tidak ada aplikasi yang dapat dijamin “tidak bisa diretas”. Kontrol yang sudah tersedia meliputi:
+Kontrol yang sudah tersedia meliputi:
 
 - Firebase token verification dan cookie `HttpOnly`, `SameSite=Strict`.
 - Rate limit percobaan login gagal.
