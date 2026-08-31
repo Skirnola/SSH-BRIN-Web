@@ -30,8 +30,14 @@ fi
 touch /home/jetson/.ssh/authorized_keys
 grep -qxF "$(cat /home/jetson/.ssh/brin_web_backend.pub)" /home/jetson/.ssh/authorized_keys \
   || cat /home/jetson/.ssh/brin_web_backend.pub >> /home/jetson/.ssh/authorized_keys
-chmod 600 /home/jetson/.ssh/authorized_keys /home/jetson/.ssh/brin_web_backend
+chmod 600 /home/jetson/.ssh/authorized_keys
 chmod 644 /home/jetson/.ssh/brin_web_backend.pub
+
+# The API container runs as GID 10001. Give only that dedicated group
+# read access to the private key without making it world-readable.
+getent group 10001 >/dev/null || sudo groupadd --gid 10001 brin-container-secret
+sudo chown jetson:10001 /home/jetson/.ssh/brin_web_backend
+chmod 640 /home/jetson/.ssh/brin_web_backend
 ```
 
 Pin the current Jetson SSH host key under the hostname used inside Docker:
@@ -122,6 +128,13 @@ The initial ARM64 build can take several minutes. Do not run detection during th
 
 ```bash
 docker compose --env-file deploy/jetson.env up -d
+```
+
+Confirm that the non-root API user can read the mounted key:
+
+```bash
+docker compose --env-file deploy/jetson.env exec api sh -c \
+  'id && test -r /run/secrets/jetson_key && echo KEY_READABLE'
 ```
 
 Check it:
