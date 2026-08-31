@@ -2,10 +2,10 @@
   <img src="apps/web/public/brin-icon.png" alt="BRIN" width="82" />
 </p>
 
-<h1 align="center">BRIN Edge Workspace</h1>
+<h1 align="center">BRIN Edge Computing</h1>
 
 <p align="center">
-  Workspace web internal untuk memantau NVIDIA Jetson, menelusuri berkas riset, melihat kamera parkir, dan menjalankan deteksi kendaraan yang telah disetujui.
+  Website internal untuk memantau NVIDIA Jetson, melihat kamera parkir, dan menjalankan deteksi kendaraan tanpa harus SSH.
 </p>
 
 <p align="center">
@@ -25,7 +25,6 @@
 - **Deteksi kendaraan** — menjalankan hanya script `Test*.py` dan `Tset*.py` yang masuk allowlist, lalu menampilkan anotasinya.
 - **Firebase Authentication** — sesi HttpOnly yang dapat diperbarui dan tetap aktif setelah browser ditutup.
 - **Petunjuk pengguna baru** — tur tiga langkah yang tersimpan secara lokal pada setiap browser.
-- **Antarmuka Bahasa Indonesia** — responsif untuk laptop dan perangkat seluler.
 
 ## Arsitektur aman
 
@@ -54,9 +53,9 @@ apps/
     └── src/
 ```
 
-## Menjalankan secara lokal
+## Menjalankan di lokal
 
-### 1. Prasyarat
+### 1. Tools
 
 - Node.js 20+
 - Python 3.11+
@@ -90,7 +89,7 @@ npm run dev
 
 Buka [http://localhost:3000](http://localhost:3000).
 
-## Variabel lingkungan penting
+## Variabel penting
 
 | Variabel | Keterangan |
 |---|---|
