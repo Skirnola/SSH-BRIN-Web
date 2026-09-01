@@ -57,8 +57,11 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .login-field { display: flex; height: 49px; align-items: center; gap: 11px; margin-bottom: 19px; padding: 0 14px; border: 1px solid #ccd7da; border-radius: 7px; background: #fbfcfc; transition: border-color 150ms ease, box-shadow 150ms ease; }
 .login-field:focus-within { border-color: var(--brin-blue); box-shadow: 0 0 0 3px rgb(8 104 178 / 10%); }
 .login-field svg { width: 17px; height: 17px; flex: 0 0 auto; color: #79909c; }
-.login-field input { width: 100%; height: 100%; border: 0; outline: 0; color: var(--primary-ink); background: transparent; font-size: 12px; }
+.login-field input { width: 100%; min-width: 0; height: 100%; border: 0; outline: 0; color: var(--primary-ink); background: transparent; font-size: 12px; }
 .login-field input::placeholder { color: #9aa8ae; }
+.password-toggle { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; margin-right: -7px; border: 0; border-radius: 6px; color: #718791; background: transparent; cursor: pointer; transition: transform 140ms var(--ease), color 160ms ease, background 160ms ease; }
+.password-toggle:hover { color: var(--brin-blue); background: #eaf3f8; }
+.password-toggle svg { width: 17px; height: 17px; }
 .login-error { display: flex; align-items: flex-start; gap: 9px; margin: -2px 0 16px; padding: 11px 12px; border: 1px solid #f2c3bf; border-radius: 7px; color: #8f302b; background: #fff2f0; font-size: 10px; line-height: 1.4; }
 .login-error svg { width: 15px; height: 15px; flex: 0 0 auto; }
 .login-submit { display: flex; width: 100%; height: 49px; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: 7px; color: white; background: var(--brin-blue); box-shadow: 0 9px 20px rgb(8 104 178 / 18%); font-size: 11px; font-weight: 800; cursor: pointer; transition: transform 140ms var(--ease), background 160ms ease, box-shadow 180ms ease; }
@@ -327,7 +330,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .toast strong { margin-bottom: 2px; font-size: 11px; }
 .toast div > span { color: #a9bfca; font-size: 9px; }
 
-.login-submit:active:not(:disabled), .run-button:active:not(:disabled), .logout-button:active:not(:disabled), .tour-launch:active:not(:disabled), .tour-next:active:not(:disabled), .tour-back:active:not(:disabled), .refresh-button:active:not(:disabled), .icon-button:active:not(:disabled), .viewer-close:active:not(:disabled), .viewer-mode-switch button:active:not(:disabled), .start-detection-button:active:not(:disabled), .secondary-detection-button:active:not(:disabled), .stop-detection-button:active:not(:disabled), .folder-button:active:not(:disabled), .file-button:active:not(:disabled) { transform: translateY(1px) scale(.975); }
+.login-submit:active:not(:disabled), .password-toggle:active:not(:disabled), .run-button:active:not(:disabled), .logout-button:active:not(:disabled), .tour-launch:active:not(:disabled), .tour-next:active:not(:disabled), .tour-back:active:not(:disabled), .refresh-button:active:not(:disabled), .icon-button:active:not(:disabled), .viewer-close:active:not(:disabled), .viewer-mode-switch button:active:not(:disabled), .start-detection-button:active:not(:disabled), .secondary-detection-button:active:not(:disabled), .stop-detection-button:active:not(:disabled), .folder-button:active:not(:disabled), .file-button:active:not(:disabled) { transform: translateY(1px) scale(.975); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes auth-scan { from { transform: translateX(0); } to { transform: translateX(150%); } }

@@ -26,6 +26,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [submitting, setSubmitting] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     try {
       const sessionUser = await login(username.trim(), password);
       setPassword("");
+      setPasswordVisible(false);
       setUser(sessionUser);
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : "Tidak dapat masuk");
@@ -73,6 +75,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     setUser(null);
     setUsername("");
     setPassword("");
+    setPasswordVisible(false);
   };
 
   if (checking) {
@@ -114,7 +117,19 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             <div className="login-field"><Icon name="user" /><input id="username" name="username" autoComplete="username" value={username} onChange={(event) => setUsername(event.target.value)} placeholder="Masukkan nama pengguna" required autoFocus /></div>
 
             <label htmlFor="password">Kata sandi</label>
-            <div className="login-field"><Icon name="lock" /><input id="password" name="password" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Masukkan kata sandi" required /></div>
+            <div className="login-field">
+              <Icon name="lock" />
+              <input id="password" name="password" type={passwordVisible ? "text" : "password"} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Masukkan kata sandi" spellCheck={false} required />
+              <button
+                className="password-toggle"
+                type="button"
+                aria-label={passwordVisible ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                aria-pressed={passwordVisible}
+                onClick={() => setPasswordVisible((visible) => !visible)}
+              >
+                <Icon name={passwordVisible ? "eye-off" : "eye"} />
+              </button>
+            </div>
 
             {error && <div className="login-error" role="alert"><Icon name="x" /><span>{error}</span></div>}
 

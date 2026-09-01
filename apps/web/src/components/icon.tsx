@@ -10,6 +10,8 @@ export type IconName =
   | "clock"
   | "code"
   | "cpu"
+  | "eye"
+  | "eye-off"
   | "file"
   | "folder"
   | "hardDrive"
@@ -35,6 +37,8 @@ const paths: Record<IconName, React.ReactNode> = {
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
   code: <path d="m8 9-4 3 4 3m8-6 4 3-4 3m-3-9-2 12" />,
   cpu: <><rect x="7" y="7" width="10" height="10" rx="1" /><path d="M9 2v3m3-3v3m3-3v3M9 19v3m3-3v3m3-3v3M2 9h3m-3 3h3m-3 3h3m14-6h3m-3 3h3m-3 3h3" /></>,
+  eye: <><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.5" /></>,
+  "eye-off": <><path d="m3 3 18 18" /><path d="M10.6 6.2A10 10 0 0 1 12 6c6 0 9.5 6 9.5 6a15 15 0 0 1-2.1 2.8M6.2 6.2C3.8 8 2.5 12 2.5 12s3.5 6 9.5 6a9.5 9.5 0 0 0 3.1-.5" /><path d="M10.2 10.2a2.5 2.5 0 0 0 3.6 3.6" /></>,
   file: <><path d="M6 2h8l4 4v16H6z" /><path d="M14 2v5h5" /></>,
   folder: <><path d="M3 6.5h5l2 2h11v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M3 10h18" /></>,
   hardDrive: <><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M7 15h.01M11 15h6" /></>,
