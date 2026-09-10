@@ -15,7 +15,14 @@ RUN groupadd --system --gid 10001 brin \
 
 COPY requirements.txt ./
 RUN python -m pip install --upgrade pip setuptools \
-    && python -m pip install -r requirements.txt
+    && python -m pip install -r requirements.txt \
+    && python -m pip check \
+    && rm -rf /usr/local/lib/python3.12/ensurepip \
+        /usr/local/lib/python3.12/site-packages/pip \
+        /usr/local/lib/python3.12/site-packages/pip-* \
+        /usr/local/lib/python3.12/site-packages/setuptools \
+        /usr/local/lib/python3.12/site-packages/setuptools-* \
+        /usr/local/bin/pip /usr/local/bin/pip3 /usr/local/bin/pip3.12
 
 COPY --chown=brin:brin app ./app
 RUN mkdir -p /app/.cache && chown brin:brin /app/.cache
