@@ -1,5 +1,7 @@
 # Jetson Docker trial
 
+> For automatic GitHub Actions deployment after merging to `main`, see [CI-CD.md](CI-CD.md). This file remains the manual deployment and recovery guide.
+
 This deployment keeps the detection environment and camera access on the Jetson host. FastAPI runs in Docker and connects back to the host through a dedicated SSH key. Caddy exposes one same-origin HTTP endpoint on the Jetson Tailnet address.
 
 ## 1. Clone or update the repository

@@ -57,7 +57,9 @@ apps/
 
 Repository menyertakan deployment ARM64 dengan Next.js, FastAPI, dan Caddy. Kamera serta proses deteksi tetap berjalan pada host Jetson; container API terhubung kembali melalui SSH yang dipin.
 
-Panduan lengkap: **[deploy/README.md](deploy/README.md)**
+Panduan deployment manual: **[deploy/README.md](deploy/README.md)**
+
+Panduan CI/CD GitHub Actions dan deployment otomatis: **[deploy/CI-CD.md](deploy/CI-CD.md)**
 
 ```bash
 cp deploy/jetson.env.example deploy/jetson.env

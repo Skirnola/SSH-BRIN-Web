@@ -50,3 +50,4 @@ nul
 # Local screenshots and temporary files
 *.tmp
 *.local.png
+.last-successful-deploy

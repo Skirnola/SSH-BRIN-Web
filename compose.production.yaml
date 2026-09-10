@@ -1,0 +1,6 @@
+services:
+  api:
+    image: ghcr.io/skirnola/ssh-brin-web-api:${IMAGE_TAG:?IMAGE_TAG is required}
+
+  web:
+    image: ghcr.io/skirnola/ssh-brin-web-web:${IMAGE_TAG:?IMAGE_TAG is required}
