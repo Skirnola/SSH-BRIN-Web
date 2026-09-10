@@ -626,7 +626,7 @@ export function EdgeWorkspace({ files, highlightedFiles }: Props) {
         <section className="camera-viewer detection-viewer" role="dialog" aria-modal="true" aria-labelledby="detection-viewer-title">
           <header className="camera-viewer-header">
             <div className="viewer-camera-name">
-              <span className="detection-header-icon"><Icon name="activity" /></span>
+              <Image className="viewer-device-photo" src="/Camera1.jpg" width={44} height={44} alt="Kamera area parkir" />
               <div><span>{activeDetectionScript}</span><h2 id="detection-viewer-title">Deteksi kendaraan</h2></div>
             </div>
             <div className="viewer-controls">
