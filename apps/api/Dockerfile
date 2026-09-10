@@ -6,11 +6,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN groupadd --system --gid 10001 brin \
     && useradd --system --uid 10001 --gid brin --home-dir /app brin
 
 COPY requirements.txt ./
-RUN python -m pip install --upgrade pip \
+RUN python -m pip install --upgrade pip setuptools \
     && python -m pip install -r requirements.txt
 
 COPY --chown=brin:brin app ./app
