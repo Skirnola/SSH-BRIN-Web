@@ -165,7 +165,3 @@ Satu akun Firebase dapat memiliki banyak sesi browser secara bersamaan. Sekitar 
 - Batasi Firebase API key pada API yang diperlukan di Google Cloud Console.
 - Jangan expose port FastAPI, SSH, atau kamera ke internet publik.
 - Jalankan dependency audit dan backup Firebase secara berkala.
-
----
-
-<p align="center"><strong>Badan Riset dan Inovasi Nasional</strong><br />Internal edge research workspace</p>
