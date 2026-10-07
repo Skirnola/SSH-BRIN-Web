@@ -254,6 +254,28 @@ curl -fsS http://127.0.0.1:3000/api/v1/health
 - New deployment unhealthy: the script retags and restores the previous API and web image.
 - Rollback unhealthy: workflow fails and prints service status/logs for manual response.
 
+### Troubleshooting a successful build followed by a failed image scan
+
+A successful image build is not a successful release. Expand **Scan published ARM64 image → Run Trivy** and read the vulnerability table below the report summary. OS packages can show zero vulnerabilities while an application dependency still fails the gate.
+
+The `935340e` dashboard release was blocked by Next.js `16.3.3` (`GHSA-vcvr-r3jv-pc5j`, fixed in `16.3.6`) and sharp `0.35.4` (`GHSA-wq5f-xc86-pv6w`, fixed in `0.35.5`). The dependency update uses Next.js/eslint-config-next `16.3.8` and locks sharp to `0.35.5`. Keep both `apps/web/package.json` and `apps/web/package-lock.json` in the release commit.
+
+CI now checks production npm dependencies before building, and Buildx pulls current base images. Trivy remains the final ARM64 runtime-image gate; do not bypass it with `exit-code: 0` or `continue-on-error`. Push the patched commit to build a new image, rather than rerunning the old vulnerable commit.
+
+For a local check:
+
+```bash
+cd apps/web
+npm ci
+npm audit --omit=dev --audit-level=high
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
+
+A full `npm audit` also covers development tooling. At the time of this patch it still reports an unpatched `braces` advisory through eslint-config-next's fast-glob/micromatch dependency chain. These are development dependencies, not packages in the standalone runtime image. Track the upstream fix; do not use `npm audit fix --force`, which currently proposes downgrading the lint configuration to Next.js 14.
+
 ## 10. Pause automatic deployment
 
 Change or delete this repository variable:
