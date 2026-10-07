@@ -3,26 +3,26 @@
 import { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "./icon";
 
-const STORAGE_KEY = "brin-workspace-tour-v1";
+const STORAGE_KEY = "brin-workspace-tour-v2";
 
 const steps = [
   {
-    target: "tour-workspace",
+    target: "tour-detection",
     eyebrow: "Petunjuk 1 dari 3",
-    title: "Berkas workspace",
-    body: "Telusuri folder dan pilih berkas Jetson dari panel ini. Workspace hanya dapat membaca berkas yang diizinkan di dalam direktori BRIN.",
-  },
-  {
-    target: "tour-code",
-    eyebrow: "Petunjuk 2 dari 3",
-    title: "Kode dan jalankan deteksi",
-    body: "Isi berkas terpilih ditampilkan sebagai kode hanya-baca. Tombol Jalankan deteksi hanya muncul pada script deteksi yang telah disetujui—bukan untuk menjalankan perintah bebas.",
+    title: "Jalankan deteksi",
+    body: "Klik Jalankan deteksi kendaraan untuk melihat hasil analisis langsung. Sistem hanya menjalankan program deteksi yang sudah ditetapkan.",
   },
   {
     target: "tour-camera",
+    eyebrow: "Petunjuk 2 dari 3",
+    title: "Kamera parkir",
+    body: "Lihat gambar terbaru atau buka Real-Time Cam dari menu Kamera. Jika kamera sedang offline, periksa status perangkat.",
+  },
+  {
+    target: "tour-device",
     eyebrow: "Petunjuk 3 dari 3",
-    title: "Tampilan kamera",
-    body: "Lihat frame kamera terbaru di sini. Gunakan tombol perbesar untuk membuka tampilan penuh, lalu pilih Gambar atau Real-Time Cam.",
+    title: "Kondisi perangkat",
+    body: "Pantau koneksi kamera, kesehatan Jetson, suhu, memori, dan penyimpanan di menu Kondisi perangkat.",
   },
 ] as const;
 
@@ -118,7 +118,7 @@ export function WorkspaceTour({ request = 0, onStepChange }: { request?: number;
       <div className="tour-highlight" style={highlightStyle} aria-hidden="true" />
       <section key={step} className="tour-card" style={tooltipStyle}>
         <div className="tour-card-top"><span>{current.eyebrow}</span><button type="button" onClick={close} aria-label="Lewati petunjuk"><Icon name="x" /></button></div>
-        <span className="tour-icon"><Icon name={step === 0 ? "folder" : step === 1 ? "code" : "camera"} /></span>
+        <span className="tour-icon"><Icon name={step === 0 ? "play" : step === 1 ? "camera" : "activity"} /></span>
         <h2 id="tour-title">{current.title}</h2>
         <p>{current.body}</p>
         <div className="tour-progress" aria-label={`Langkah ${step + 1} dari ${steps.length}`}>{steps.map((_, index) => <i key={index} className={index === step ? "active" : undefined} />)}</div>

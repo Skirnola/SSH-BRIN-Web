@@ -1,5 +1,6 @@
 import base64
 import json
+import ipaddress
 import re
 import shlex
 import stat
@@ -54,7 +55,7 @@ print(json.dumps({
 '''
 
 LIVE_STREAM_SCRIPT = r'''
-import ast, json, sys, time
+import ast, ipaddress, json, sys, time
 import cv2
 config = json.loads(sys.stdin.buffer.read())
 with open(config["config_path"], encoding="utf-8") as source_file:
@@ -63,19 +64,20 @@ values = {}
 for node in tree.body:
     if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
         name = node.targets[0].id
-        if name in {"CAMERA_IP", "USERNAME", "CAMERA_PASSWORD"}:
+        if name in {"USERNAME", "CAMERA_PASSWORD"}:
             try:
                 value = ast.literal_eval(node.value)
                 if isinstance(value, str): values[name] = value
             except (ValueError, TypeError):
                 pass
-if values.get("CAMERA_IP") != config["expected_ip"]:
-    raise SystemExit(5)
+# The camera address comes from the server's trusted deployment settings;
+# Mobil_Pos.py only supplies the private credentials.
+camera_ip = str(ipaddress.IPv4Address(config["expected_ip"]))
 from urllib.parse import quote
 channel = str(config["channel"])
 if channel not in {"101", "102"}:
     raise SystemExit(6)
-url = f"rtsp://{values['USERNAME']}:{quote(values['CAMERA_PASSWORD'], safe='')}@{values['CAMERA_IP']}:554/Streaming/Channels/{channel}"
+url = f"rtsp://{values['USERNAME']}:{quote(values['CAMERA_PASSWORD'], safe='')}@{camera_ip}:554/Streaming/Channels/{channel}"
 capture = cv2.VideoCapture(url, cv2.CAP_FFMPEG)
 capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 if not capture.isOpened():
@@ -115,7 +117,7 @@ finally:
 '''
 
 FRAME_SCRIPT = r'''
-import ast, json, os, sys, tempfile
+import ast, ipaddress, json, os, sys, tempfile
 import requests
 from requests.auth import HTTPDigestAuth
 config = json.loads(sys.stdin.buffer.read())
@@ -125,15 +127,15 @@ values = {}
 for node in tree.body:
     if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
         name = node.targets[0].id
-        if name in {"CAMERA_IP", "USERNAME", "CAMERA_PASSWORD"}:
+        if name in {"USERNAME", "CAMERA_PASSWORD"}:
             try:
                 value = ast.literal_eval(node.value)
                 if isinstance(value, str): values[name] = value
             except (ValueError, TypeError):
                 pass
-if values.get("CAMERA_IP") != config["expected_ip"]:
-    raise SystemExit(5)
-url = f"http://{values['CAMERA_IP']}/ISAPI/Streaming/channels/101/picture"
+# Use the configured camera IP instead of a possibly stale IP in Mobil_Pos.py.
+camera_ip = str(ipaddress.IPv4Address(config["expected_ip"]))
+url = f"http://{camera_ip}/ISAPI/Streaming/channels/101/picture"
 response = requests.get(
     url,
     auth=HTTPDigestAuth(values["USERNAME"], values["CAMERA_PASSWORD"]),

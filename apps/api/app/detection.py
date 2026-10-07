@@ -8,20 +8,8 @@ import asyncssh
 from .config import Settings
 from .jetson import connect, encoded_python_command
 
-DETECTION_SCRIPTS = (
-    "Test19Agus_line_fuzzy_anomaly.py",
-    "Test19Agus_line_fuzzy_anomaly_fixed_alignment.py",
-    "Test19Agus_optimized_fps_big_ui.py",
-    "Test_anomaly_fuzzy_19Agustus.py",
-    "Tset118aug.py",
-    "Tset118aug_anomaly.py",
-    "Tset118aug_anomaly_fuzzy.py",
-    "Tset118aug_anomaly_fuzzy_colored_v2.py",
-    "Tset118aug_fixed.py",
-    "Tset118aug_fixed_polygon.py",
-    "Tset118aug_optimized.py",
-    "Tset118aug_optimized_big_ui.py",
-)
+DETECTION_SCRIPT = "Test19Agus_optimized_fps_big_ui.py"
+DETECTION_SCRIPTS = (DETECTION_SCRIPT,)
 
 DETECTION_WRAPPER = r'''
 import json, os, runpy, sys, time

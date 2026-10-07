@@ -177,6 +177,35 @@ docker stats --no-stream
 
 Tailscale Serve/Funnel remains active; it does not need to be restarted for normal deployments.
 
+## Release checklist: focused vehicle-detection dashboard
+
+The dashboard now has three sections: **Jalankan deteksi**, **Kamera**, and **Kondisi perangkat**. File browsing and code viewing are no longer exposed in the dashboard UI.
+
+Before deploying this release:
+
+1. On the Jetson, edit the existing private `deploy/jetson.env` (do not replace it with the example or commit it) and confirm:
+
+   ```dotenv
+   CAMERA_IP=10.21.1.92
+   CAMERA_FRAME_CACHE=/home/jetson/.cache/brin-edge/camera-frame-10.21.1.92.jpg
+   CAMERA_LIVE_CHANNEL=101
+   ```
+
+   The deployment script preserves this file. Changing `deploy/jetson.env.example` or Python defaults does **not** override values already set in the private environment.
+
+2. Confirm the approved script exists on the Jetson host:
+
+   ```bash
+   test -f '/home/jetson/BRIN RI NDIP/Test19Agus_optimized_fps_big_ui.py' && echo SCRIPT_OK
+   test -x /home/jetson/yolo-env/bin/python && echo PYTHON_OK
+   ```
+
+   Detection runs the host's copy of this script, not a copy bundled in the web image. Confirm its camera target and model paths are correct separately: the dashboard's `CAMERA_IP` controls snapshots and Real-Time Cam, not camera addresses embedded in the detection script. Running detection may write to Firebase; test it intentionally.
+
+3. Push or merge the release into `main`. A push to `development` runs quality checks only; it does not update the live website. A push to `main` publishes images and deploys only when `ENABLE_JETSON_DEPLOY=true`, a matching runner is online, and any `jetson-production` environment approval is granted. Otherwise use the manual workflow dispatch described above.
+
+4. After deployment, confirm all three menus, camera snapshots, Real-Time Cam, device metrics, logout, and the updated tutorial. Intentionally start one detection session, then stop or close it and verify the host process exits. Do not treat the basic HTTP health check as proof that camera or detection hardware works.
+
 ## 7. Normal release workflow
 
 ```text

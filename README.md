@@ -19,10 +19,9 @@
 
 ## Apa yang dapat dilakukan?
 
-- **Berkas workspace** — menelusuri direktori Jetson melalui SFTP dan membuka berkas teks dalam mode hanya-baca.
+- **Jalankan deteksi** — satu tombol untuk menjalankan hanya `Test19Agus_optimized_fps_big_ui.py` di Jetson dan menampilkan hasilnya; tidak ada penjelajah berkas di UI.
+- **Kamera** — gambar berkala serta Real-Time Cam MJPEG channel HD dalam tampilan penuh.
 - **Kondisi perangkat nyata** — menampilkan GPU, suhu, memori, penyimpanan, uptime, status kamera, dan latensi.
-- **Gambar dan Real-Time Cam** — frame kamera berkala serta MJPEG channel HD dalam tampilan penuh.
-- **Deteksi kendaraan** — menjalankan hanya script `Test*.py` dan `Tset*.py` yang masuk allowlist, lalu menampilkan anotasinya.
 - **Firebase Authentication** — sesi HttpOnly yang dapat diperbarui dan tetap aktif setelah browser ditutup.
 - **Petunjuk pengguna baru** — tur tiga langkah yang tersimpan secara lokal pada setiap browser.
 
@@ -117,10 +116,11 @@ Buka [http://localhost:3000](http://localhost:3000).
 | `FIREBASE_PROJECT_ID` | Firebase project ID |
 | `FIREBASE_ADMIN_EMAIL` | Email Firebase yang dipetakan ke username operator |
 | `AUTH_COOKIE_SECURE` | Wajib `true` saat menggunakan HTTPS produksi |
+| `CAMERA_IP` | Alamat kamera yang digunakan backend untuk ping, snapshot, dan live stream; sekarang `10.21.1.92` |
 | `CAMERA_MAX_LIVE_VIEWERS` | Batas stream MJPEG bersamaan; default `4` |
 | `NEXT_PUBLIC_API_URL` | URL FastAPI yang diakses browser |
 
-Lihat `.env.example` pada masing-masing aplikasi untuk daftar lengkap.
+Lihat `.env.example` pada masing-masing aplikasi untuk daftar lengkap. Saat deploy, ubah `CAMERA_IP` pada `deploy/jetson.env` privat dan gunakan cache frame baru sebelum membangun ulang layanan API. Backend menggunakan IP ini untuk kamera tanpa mengirim kredensial ke browser. Jika script deteksi membaca IP dari konfigurasi di host Jetson, sesuaikan juga IP-nya di host secara terpisah; konfigurasi lokal tidak mengubah file Jetson.
 
 ## Pengujian
 
@@ -150,7 +150,7 @@ Kontrol yang sudah tersedia meliputi:
 - Rate limit percobaan login gagal.
 - CORS origin terbatas dan security headers/CSP.
 - Path traversal, symlink, jenis file, ukuran file, model, credential, serta secret filtering.
-- Allowlist script deteksi dan satu proses deteksi pada satu waktu.
+- Hanya satu script deteksi yang diizinkan dan satu proses deteksi pada satu waktu.
 - Known-host verification untuk mencegah SSH man-in-the-middle.
 - Snapshot cache, health cache, dan directory cache untuk mengurangi beban ketika banyak pengguna membuka dashboard.
 

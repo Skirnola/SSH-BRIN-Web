@@ -12,9 +12,9 @@ class Settings(BaseSettings):
     jetson_private_key: Path
     jetson_known_hosts: Path
     jetson_workspace: str = "/home/jetson/BRIN RI NDIP"
-    camera_ip: str = "10.21.20.52"
+    camera_ip: str = "10.21.1.92"
     camera_config_file: str = "Mobil_Pos.py"
-    camera_frame_cache: str = "/home/jetson/.cache/brin-edge/camera-frame.jpg"
+    camera_frame_cache: str = "/home/jetson/.cache/brin-edge/camera-frame-10.21.1.92.jpg"
     camera_live_channel: int = 101
     camera_max_live_viewers: int = 4
     detection_python: str = "/home/jetson/yolo-env/bin/python"
