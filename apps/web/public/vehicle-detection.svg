@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+  <title>Ilustrasi deteksi kendaraan di area parkir BRIN</title>
+  <defs>
+    <clipPath id="scene"><rect width="240" height="240" rx="24"/></clipPath>
+  </defs>
+  <g clip-path="url(#scene)">
+    <path fill="#dceefa" d="M0 0h240v240H0z"/>
+    <!-- Research buildings and the red facade from the parking-area reference. -->
+    <path fill="#b3c5d3" d="M35 20h156v80H35z"/>
+    <path fill="#f5f8fb" d="M34 16h164v9H34z"/>
+    <path fill="#426b86" d="M45 32h140v50H45z"/>
+    <path stroke="#b8d3e1" stroke-width="5" d="M45 48h140M45 65h140M66 32v50M92 32v50M119 32v50M145 32v50M173 32v50"/>
+    <path fill="#dd524b" d="M124 23h12v71h-12z"/>
+    <path fill="#f1f5f8" d="M35 82h161v13H35z"/>
+    <!-- The foreground courtyard, entrance at left, and planted edge at right. -->
+    <path fill="#97aca4" d="M0 89h240v151H0z"/>
+    <path fill="#c5ccd0" d="m62 93 113 1 65 146H0z"/>
+    <path fill="#d9e0e2" d="m0 81 56 10 13 65-69 31z"/>
+    <path fill="#f4f6f5" d="m0 76 60 9v12L0 88z"/>
+    <path fill="#708796" d="m14 104 34 6 8 42-42 13z"/>
+    <path fill="#d75048" d="m25 110 5 1v45l-5 2z"/>
+    <path fill="#edf1ef" d="m7 154 53-15 5 11-58 18z"/>
+    <path stroke="#edf2f2" stroke-width="3" d="m77 106-21 46m33-46-20 46m91-45 24 48m-12-48 24 48"/>
+    <path fill="#6c967c" d="m196 91 44 8v141l-18-18z"/>
+    <path stroke="#64745a" stroke-width="5" d="m212 65 14 117M197 36l6 86"/>
+    <g fill="#4b7d63">
+      <ellipse cx="202" cy="51" rx="29" ry="22"/>
+      <ellipse cx="216" cy="73" rx="28" ry="25"/>
+    </g>
+    <g fill="#6b9b76">
+      <ellipse cx="190" cy="42" rx="19" ry="15"/>
+      <ellipse cx="221" cy="57" rx="20" ry="17"/>
+    </g>
+    <!-- Two legible toy-like vehicles, not simulated live results. -->
+    <g transform="translate(57 120) rotate(-13 28 25)">
+      <ellipse cx="29" cy="52" rx="32" ry="9" fill="#526779" opacity=".18"/>
+      <rect x="0" y="16" width="9" height="17" rx="4" fill="#283c4b"/>
+      <rect x="48" y="16" width="9" height="17" rx="4" fill="#283c4b"/>
+      <rect x="0" y="40" width="9" height="17" rx="4" fill="#283c4b"/>
+      <rect x="48" y="40" width="9" height="17" rx="4" fill="#283c4b"/>
+      <rect x="4" y="4" width="49" height="55" rx="13" fill="#e05d51"/>
+      <path d="m13 12 31 0 3 13H10z" fill="#b5d9e8"/>
+      <rect x="12" y="30" width="33" height="17" rx="5" fill="#c74740"/>
+      <path d="M10 51h9m19 0h9" stroke="#fff2c3" stroke-width="5" stroke-linecap="round"/>
+      <path d="M23 55h12" stroke="#f5e6df" stroke-width="3"/>
+    </g>
+    <g transform="translate(135 153) rotate(9 29 27)">
+      <ellipse cx="29" cy="57" rx="33" ry="9" fill="#526779" opacity=".18"/>
+      <rect x="0" y="17" width="9" height="17" rx="4" fill="#283c4b"/>
+      <rect x="49" y="17" width="9" height="17" rx="4" fill="#283c4b"/>
+      <rect x="0" y="42" width="9" height="17" rx="4" fill="#283c4b"/>
+      <rect x="49" y="42" width="9" height="17" rx="4" fill="#283c4b"/>
+      <rect x="4" y="3" width="50" height="60" rx="14" fill="#f4f8f9"/>
+      <path d="m14 11 30 0 4 16H10z" fill="#639bb7"/>
+      <rect x="12" y="32" width="34" height="16" rx="5" fill="#d2dfe5"/>
+      <path d="M10 54h9m20 0h9" stroke="#edba57" stroke-width="5" stroke-linecap="round"/>
+      <path d="M22 59h14" stroke="#859ba8" stroke-width="3"/>
+    </g>
+    <!-- Detection brackets keep the purpose clear at thumbnail size. -->
+    <path d="M45 132v-19h19m24 0h19v19m0 36v19H88m-24 0H45v-19" stroke="#137cb9" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M126 164v-19h19m35 0h19v19m0 41v19h-19m-35 0h-19v-19" stroke="#dc9a22" stroke-width="5" fill="none" stroke-linecap="round"/>
+  </g>
+</svg>

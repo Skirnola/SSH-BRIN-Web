@@ -2,29 +2,19 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getCameraFrameUrl, getCameraLiveUrl, getDetectionLiveUrl, getSystemHealth } from "@/lib/jetson-api";
 import { useWorkspaceAuth } from "./auth-gate";
 import { Icon } from "./icon";
 import { WorkspaceTour } from "./workspace-tour";
 
 const DETECTION_SCRIPT = "Test19Agus_optimized_fps_big_ui.py";
-type View = "detection" | "camera" | "device";
-
-const navigation: { id: View; label: string; icon: "play" | "camera" | "activity" }[] = [
-  { id: "detection", label: "Jalankan deteksi", icon: "play" },
-  { id: "camera", label: "Kamera", icon: "camera" },
-  { id: "device", label: "Kondisi perangkat", icon: "activity" },
-];
-
 function StatusDot() {
   return <span className="status-dot" aria-hidden="true" />;
 }
 
 export function EdgeWorkspace() {
   const { signOut } = useWorkspaceAuth();
-  const [view, setView] = useState<View>("detection");
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [tourRequest, setTourRequest] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [frameVersion, setFrameVersion] = useState(0);
@@ -66,7 +56,6 @@ export function EdgeWorkspace() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setDrawerOpen(false);
         setNotificationsOpen(false);
         setViewerOpen(false);
         setDetectionViewerOpen(false);
@@ -79,11 +68,6 @@ export function EdgeWorkspace() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
-
-  const changeView = (next: View) => {
-    setView(next);
-    setDrawerOpen(false);
-  };
 
   const refreshCameraFrame = () => {
     setFrameLoading(true);
@@ -125,13 +109,6 @@ export function EdgeWorkspace() {
     setDetectionViewerOpen(false);
   };
 
-  const handleTourStepChange = useCallback((step: number | null) => {
-    if (step !== null) {
-      setView(navigation[step].id);
-      setDrawerOpen(false);
-    }
-  }, []);
-
   const health = systemHealth.data;
   const updatedLabel = health
     ? new Date(health.updated_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(".", ":")
@@ -139,35 +116,15 @@ export function EdgeWorkspace() {
   const uptimeDays = health ? Math.floor(health.jetson.uptime_seconds / 86_400) : null;
 
   return (
-    <div className={`app-shell${drawerOpen ? " drawer-open" : ""}`}>
-      <button className="drawer-scrim" type="button" aria-label="Tutup navigasi" onClick={() => setDrawerOpen(false)} tabIndex={drawerOpen ? 0 : -1} />
-      <aside className="sidebar" aria-label="Navigasi ruang kerja">
-        <div className="sidebar-brand">
-          <div className="brand-lockup">
-            <Image className="brand-icon" src="/brin-icon.png" width={48} height={48} alt="Logo BRIN" priority />
-            <div className="brand-name"><strong>BRIN</strong><span>Badan Riset dan Inovasi Nasional</span></div>
-          </div>
-          <button className="sidebar-close" type="button" onClick={() => setDrawerOpen(false)} aria-label="Tutup menu"><Icon name="x" /></button>
-        </div>
-        <div className="workspace-label">Ruang kerja</div>
-        <nav className="workspace-nav" aria-label="Navigasi utama">
-          {navigation.map((item) => (
-            <button key={item.id} className={view === item.id ? "active" : undefined} type="button" aria-current={view === item.id ? "page" : undefined} onClick={() => changeView(item.id)}>
-              <Icon name={item.icon} /><span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-        <div className={`sidebar-health${systemHealth.isError ? " connection-error" : ""}`}>
-          <StatusDot />
-          <div><strong>{health ? "Jetson terhubung" : systemHealth.isError ? "Jetson tidak terhubung" : "Memeriksa Jetson…"}</strong><span>{health ? `Diperbarui ${updatedLabel}` : systemHealth.isError ? "Data tidak tersedia" : "Mohon tunggu…"}</span></div>
-        </div>
-      </aside>
-
+    <div className="app-shell">
       <div className="main-shell">
         <header className="topbar">
-          <div className="topbar-context">
-            <button className="icon-button menu-button" type="button" onClick={() => setDrawerOpen(true)} aria-label="Buka navigasi" aria-expanded={drawerOpen}><Icon name="menu" /></button>
-            <span className="location-chip">KST Samaun Samadikun</span>
+          <div className="topbar-brand">
+            <Image className="topbar-logo" src="/brin-icon.png" width={43} height={43} alt="Logo BRIN" priority />
+            <div className="topbar-brand-title">
+              <strong>BRIN</strong>
+              <span>Badan Riset dan Inovasi Nasional</span>
+            </div>
           </div>
           <div className="topbar-actions">
             <button className="tour-launch" type="button" onClick={() => setTourRequest((value) => value + 1)} aria-label="Buka petunjuk"><Icon name="help" /><span>Petunjuk</span></button>
@@ -182,17 +139,17 @@ export function EdgeWorkspace() {
         <main className="content">
           <section className="page-intro" aria-labelledby="page-title">
             <div>
-              <p className="eyebrow">Ruang kerja / {navigation.find((item) => item.id === view)?.label}</p>
-              <h1 id="page-title">{view === "detection" ? "Deteksi kendaraan" : view === "camera" ? "Kamera area parkir" : "Kondisi perangkat"}</h1>
-              <p className="intro-copy">{view === "detection" ? "Jalankan analisis kendaraan di Jetson tanpa membuka berkas atau SSH." : view === "camera" ? "Lihat gambar terbaru atau pantau kamera secara langsung." : "Pantau kesehatan kamera dan Jetson dari satu tempat."}</p>
+              <p className="eyebrow">KST Samaun Samadikun · Kamera 01</p>
+              <h1 id="page-title">Pemantauan kendaraan</h1>
+              <p className="intro-copy">Jalankan deteksi, pantau kamera, dan periksa kondisi Jetson dalam satu tampilan.</p>
             </div>
             <span className={`status-label ${health ? "healthy" : "pending"}`}><StatusDot /> {health ? "Jetson terhubung" : systemHealth.isError ? "Jetson tidak terhubung" : "Memeriksa perangkat…"}</span>
           </section>
 
-          {view === "detection" && (
+          <div className="dashboard-grid">
             <section id="tour-detection" className="panel detection-panel" aria-labelledby="detection-title">
               <div className="detection-intro">
-                <Image className="detection-photo" src="/Camera1.jpg" width={72} height={72} alt="Kamera area parkir" loading="eager" />
+                <Image className="detection-photo" src="/vehicle-detection.svg" width={80} height={80} alt="Ilustrasi deteksi kendaraan di area parkir" loading="eager" unoptimized />
                 <div><p className="panel-kicker">Analisis kendaraan · Kamera 01</p><h2 id="detection-title">Jalankan deteksi</h2><p>Video yang sudah dianalisis akan tampil langsung di layar. Tutup tampilan untuk menghentikan proses.</p></div>
               </div>
               <div className="detection-actions">
@@ -202,12 +159,10 @@ export function EdgeWorkspace() {
                 <span>{systemHealth.isError ? "Jetson belum dapat dijangkau. Anda dapat mencoba kembali nanti." : "Satu proses deteksi pada satu waktu."}</span>
               </div>
             </section>
-          )}
 
-          {view === "camera" && (
             <section id="tour-camera" className="panel camera-panel camera-workspace" aria-labelledby="camera-title">
               <div className="panel-heading">
-                <div><p className="panel-kicker">Frame terbaru</p><h2 id="camera-title">Tampilan kamera</h2></div>
+                <div><p className="panel-kicker">Frame terbaru</p><h2 id="camera-title">Kamera</h2></div>
                 <div className="camera-actions">
                   <button className="refresh-button" type="button" onClick={refreshCameraFrame} aria-label="Perbarui frame kamera"><Icon name="refresh" className={frameLoading ? "spinning" : undefined} /></button>
                   <button className="refresh-button expand-button" type="button" onClick={() => { setViewerMode("image"); setViewerOpen(true); }} aria-label="Perbesar tampilan kamera"><Icon name="maximize" /></button>
@@ -219,15 +174,12 @@ export function EdgeWorkspace() {
                 <img src={frameFailed ? "/Camera1.jpg" : getCameraFrameUrl(frameVersion)} alt={frameFailed ? "Foto perangkat Kamera 1" : "Frame terbaru Kamera 1"} loading="lazy" onLoad={() => setFrameLoading(false)} onError={() => { setFrameLoading(false); setFrameFailed(true); }} />
                 {frameLoading && <div className="frame-state"><Icon name="refresh" className="spinning" /> Mengambil frame…</div>}
                 {frameFailed && <div className="frame-badge warning">Frame langsung belum tersedia</div>}
-                {!frameLoading && !frameFailed && <div className="frame-badge"><StatusDot /> Frame aktual</div>}
               </div>
               <dl className="camera-details"><div><dt>Sumber</dt><dd>Camera 01</dd></div><div><dt>Alamat</dt><dd>{health?.camera.ip ?? "—"}</dd></div></dl>
               <div className="result-source"><Icon name="camera" /> Diperbarui otomatis setiap 30 detik · tanpa deteksi</div>
               <button className="camera-live-button" type="button" onClick={() => { setViewerOpen(true); selectLiveMode(); }}><Icon name="video" /> Buka Real-Time Cam</button>
             </section>
-          )}
 
-          {view === "device" && (
             <section id="tour-device" className="panel health-panel device-workspace" aria-labelledby="health-title">
               <div className="panel-heading">
                 <div><h2 id="health-title">Kondisi perangkat</h2><span className="updated-time">{health ? `Diperbarui ${updatedLabel}` : systemHealth.isError ? "Data tidak tersedia" : "Mengambil data nyata…"}</span></div>
@@ -247,7 +199,7 @@ export function EdgeWorkspace() {
                 <div className="storage-meter"><div><span>Penyimpanan</span><strong>{health ? `${health.jetson.storage_percent}%` : "—"}</strong></div><div className="meter-track"><span style={{ width: `${health?.jetson.storage_percent ?? 0}%` }} /></div></div>
               </article>
             </section>
-          )}
+          </div>
         </main>
       </div>
 
@@ -279,7 +231,7 @@ export function EdgeWorkspace() {
 
       {detectionViewerOpen && (
         <section className="camera-viewer detection-viewer" role="dialog" aria-modal="true" aria-labelledby="detection-viewer-title">
-          <header className="camera-viewer-header"><div className="viewer-camera-name"><Image className="viewer-device-photo" src="/Camera1.jpg" width={44} height={44} alt="Kamera area parkir" /><div><span>Analisis kamera 01</span><h2 id="detection-viewer-title">Deteksi kendaraan</h2></div></div><div className="viewer-controls">{detectionRunning && !detectionLoading && !detectionFailed && <span className="detection-running-status"><StatusDot /> Berjalan di Jetson</span>}<button className="viewer-close" type="button" onClick={closeDetectionViewer} aria-label="Tutup deteksi"><Icon name="x" /></button></div></header>
+          <header className="camera-viewer-header"><div className="viewer-camera-name"><Image className="viewer-device-photo" src="/vehicle-detection.svg" width={44} height={44} alt="Ilustrasi deteksi kendaraan" unoptimized /><div><span>Analisis kamera 01</span><h2 id="detection-viewer-title">Deteksi kendaraan</h2></div></div><div className="viewer-controls">{detectionRunning && !detectionLoading && !detectionFailed && <span className="detection-running-status"><StatusDot /> Berjalan di Jetson</span>}<button className="viewer-close" type="button" onClick={closeDetectionViewer} aria-label="Tutup deteksi"><Icon name="x" /></button></div></header>
           <div className="camera-viewer-stage">{detectionRunning ? (
             <div className="viewer-media detection-media">
               {!detectionFailed && (
@@ -298,7 +250,7 @@ export function EdgeWorkspace() {
           <footer className="camera-viewer-footer"><span><StatusDot /> {detectionRunning ? detectionFailed ? "Deteksi gagal dimulai" : detectionLoading ? "Memulai deteksi…" : "Deteksi berjalan" : "Deteksi dihentikan"}</span><span>Menutup tampilan akan menghentikan proses</span></footer>
         </section>
       )}
-      <WorkspaceTour request={tourRequest} onStepChange={handleTourStepChange} />
+      <WorkspaceTour request={tourRequest} />
     </div>
   );
 }

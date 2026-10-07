@@ -121,9 +121,16 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .status-dot { display: inline-block; width: 8px; height: 8px; flex: 0 0 auto; margin-top: 4px; border-radius: 50%; background: #22b883; box-shadow: 0 0 0 4px rgb(34 184 131 / 13%); }
 
 .drawer-scrim { display: none; }
-.main-shell { min-height: 100vh; margin-left: 280px; }
-.topbar { position: sticky; top: 0; z-index: 20; display: flex; height: 76px; align-items: center; justify-content: space-between; padding: 0 32px; border-bottom: 1px solid #d8e0e1; background: rgb(248 250 249 / 92%); backdrop-filter: blur(14px); animation: topbar-in 400ms 60ms var(--ease) both; }
-.topbar-context, .topbar-actions { display: flex; align-items: center; gap: 14px; }
+.main-shell { min-height: 100vh; }
+.topbar { position: sticky; top: 0; z-index: 20; display: flex; height: 76px; align-items: center; justify-content: space-between; padding: 0 32px 0 0; border-bottom: 1px solid #052f52; color: #f3f8fc; background: var(--deep-blue); animation: topbar-in 400ms 60ms var(--ease) both; }
+.topbar-brand { position: relative; display: flex; width: 280px; height: 100%; flex: 0 0 auto; align-items: center; gap: 11px; padding: 4px 23px 0; background: var(--deep-blue); }
+.topbar-brand::before { position: absolute; inset: 0 0 auto; height: 4px; background: linear-gradient(90deg, var(--brin-red) 0 45%, var(--research-amber) 45% 68%, #1997d4 68%); content: ""; }
+.topbar-brand-title { min-width: 0; }
+.topbar-brand strong, .topbar-brand-title span { display: block; }
+.topbar-brand strong { color: white; font-size: 20px; font-weight: 800; letter-spacing: .05em; line-height: 1; }
+.topbar-brand-title span { margin-top: 5px; color: #9fc0d0; font-size: 8px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase; white-space: nowrap; }
+.topbar-logo { width: 43px; height: 43px; flex: 0 0 auto; object-fit: contain; }
+.topbar-actions { display: flex; align-items: center; gap: 14px; }
 .icon-button { position: relative; display: grid; width: 40px; height: 40px; place-items: center; border: 0; border-radius: 8px; background: transparent; cursor: pointer; transition: transform 140ms var(--ease), color 160ms ease, background 160ms ease; }
 .icon-button:hover { background: #e8eeee; }
 .menu-button { display: none; }
@@ -133,7 +140,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .notification-dot { position: absolute; top: 8px; right: 8px; width: 6px; height: 6px; border: 1px solid white; border-radius: 50%; background: var(--brin-red); }
 .notification-panel { position: absolute; top: 48px; right: -10px; display: grid; width: 275px; gap: 4px; padding: 15px 16px; border: 1px solid var(--line); border-radius: 9px; background: white; box-shadow: 0 18px 45px rgb(15 47 65 / 15%); animation: pop-in 180ms var(--ease); }
 .notification-panel::before { position: absolute; top: -5px; right: 24px; width: 9px; height: 9px; border-top: 1px solid var(--line); border-left: 1px solid var(--line); background: white; content: ""; transform: rotate(45deg); }
-.notification-panel strong { font-size: 12px; }
+.notification-panel strong { color: var(--primary-ink); font-size: 12px; }
 .notification-panel span { color: var(--muted-ink); font-size: 11px; }
 .logout-button { display: flex; min-height: 42px; align-items: center; gap: 8px; padding: 0 15px; border: 1px solid #cbd7da; border-radius: 8px; color: #334751; background: white; font-size: 11px; font-weight: 800; cursor: pointer; transition: transform 140ms var(--ease), border-color 160ms ease, color 160ms ease, background 160ms ease, box-shadow 180ms ease; }
 .logout-button svg { width: 16px; height: 16px; transform: rotate(180deg); }
@@ -141,6 +148,11 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .tour-launch { display: flex; min-height: 38px; align-items: center; gap: 7px; padding: 0 11px; border: 0; border-radius: 7px; color: #50636d; background: transparent; font-size: 10px; font-weight: 800; cursor: pointer; transition: transform 140ms var(--ease), color 160ms ease, background 160ms ease; }
 .tour-launch:hover { color: #075a99; background: var(--soft-blue); }
 .tour-launch svg { width: 16px; height: 16px; }
+.topbar .tour-launch, .topbar .icon-button { color: #f3f8fc; }
+.topbar .tour-launch:hover, .topbar .icon-button:hover, .topbar .icon-button[aria-expanded="true"] { color: white; background: rgb(255 255 255 / 13%); }
+.topbar .logout-button { border-color: #91b2c9; color: #f3f8fc; background: rgb(255 255 255 / 6%); }
+.topbar .logout-button:hover { border-color: #d3e5f1; color: white; background: rgb(255 255 255 / 16%); box-shadow: 0 4px 12px rgb(0 20 35 / 18%); }
+.topbar button:focus-visible { outline-color: var(--research-amber); outline-offset: 3px; }
 
 .tour-layer { position: fixed; inset: 0; z-index: 100; pointer-events: none; }
 .tour-highlight { position: fixed; border: 2px solid #5bc1f2; border-radius: 11px; box-shadow: 0 0 0 9999px rgb(3 20 30 / 72%), 0 0 0 5px rgb(91 193 242 / 18%); pointer-events: none; transition: inset 260ms var(--ease), width 260ms var(--ease), height 260ms var(--ease); }
@@ -165,10 +177,11 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .tour-back:hover { color: #263b46; background: #eef3f4; }
 .tour-next svg { width: 14px; height: 14px; }
 
-.content { width: min(100%, 1500px); margin: 0 auto; padding: 31px 32px 52px; }
+.content { width: min(100%, 1380px); margin: 0 auto; padding: 36px 32px 52px; }
 .page-intro { animation: rise-in 430ms 100ms var(--ease) both; }
-.dashboard-grid > .workspace-card { animation: rise-in 460ms 150ms var(--ease) both; }
-.dashboard-grid > .right-column { animation: rise-in 460ms 210ms var(--ease) both; }
+.dashboard-grid > .panel { animation: rise-in 460ms 150ms var(--ease) both; }
+.dashboard-grid > .camera-panel { animation-delay: 190ms; }
+.dashboard-grid > .health-panel { animation-delay: 230ms; }
 .page-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 30px; margin-bottom: 27px; }
 .eyebrow { margin: 0 0 8px; color: var(--brin-blue); font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
 .page-intro h1 { margin: 0; font-size: clamp(34px, 3.25vw, 51px); line-height: 1.06; letter-spacing: -.045em; }
@@ -179,18 +192,25 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .status-label.active { color: #075a99; background: var(--soft-blue); }
 .status-label.pending { color: #7a4540; background: #fae9e7; }
 
-.detection-panel, .camera-workspace, .device-workspace { width: min(100%, 880px); }
-.detection-panel { padding: clamp(22px, 3vw, 38px); }
+.detection-panel, .camera-workspace, .device-workspace { width: 100%; scroll-margin-top: 96px; }
+.dashboard-grid > .detection-panel { display: flex; grid-column: 1 / -1; align-items: center; justify-content: space-between; gap: 30px; padding: 25px 28px; }
+.dashboard-grid .detection-actions { flex: 0 0 auto; flex-direction: column; align-items: flex-start; gap: 9px; max-width: 310px; margin: 0; padding: 0 0 0 28px; border-top: 0; border-left: 1px solid var(--line); }
 .detection-intro { display: flex; align-items: center; gap: 20px; }
-.detection-photo { width: 72px; height: 72px; flex: 0 0 auto; border-radius: 12px; object-fit: cover; }
+.detection-photo { width: 80px; height: 80px; flex: 0 0 auto; border: 1px solid #d9e7ee; border-radius: 13px; object-fit: contain; background: #e6f2f9; }
 .detection-intro h2 { margin: 3px 0 6px; font-size: clamp(22px, 2.5vw, 30px); letter-spacing: -.03em; }
 .detection-intro p:last-child { max-width: 460px; margin: 0; color: var(--muted-ink); font-size: 12px; line-height: 1.6; }
 .detection-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); }
 .detection-actions > span { color: var(--muted-ink); font-size: 11px; }
 .camera-live-button { display: inline-flex; min-height: 42px; align-items: center; gap: 9px; margin-top: 16px; padding: 0 15px; border: 1px solid #abd2ea; border-radius: 7px; color: #075a99; background: #f3f9fc; font-size: 11px; font-weight: 800; cursor: pointer; }
 .camera-live-button:hover { background: var(--soft-blue); }
+.camera-live-button:active { transform: translateY(1px) scale(.975); }
+.camera-live-button { transition: background 160ms ease, transform 140ms var(--ease); }
 .camera-workspace .camera-frame { max-height: 520px; }
-.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(320px, .72fr); align-items: start; gap: 20px; }
+.dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(360px, 1fr); align-items: start; gap: 24px; }
+.dashboard-grid .panel-heading h2 { font-size: 18px; }
+.dashboard-grid .metrics dd { font-size: 12px; }
+.dashboard-grid .camera-frame > img { object-fit: contain; }
+.dashboard-grid .camera-live-button { width: 100%; justify-content: center; }
 .workspace-card, .panel { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 6px 20px rgb(25 60 76 / 4%); transition: border-color 220ms ease, box-shadow 240ms var(--ease); }
 .workspace-card:hover, .panel:hover { border-color: #cbd7d9; box-shadow: 0 10px 28px rgb(25 60 76 / 7%); }
 .workspace-header { display: flex; min-height: 68px; align-items: center; justify-content: space-between; gap: 18px; padding: 13px 18px; border-bottom: 1px solid #e1e7e8; }
@@ -282,7 +302,6 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .frame-state { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; color: #3f555f; background: rgb(235 241 242 / 88%); font-size: 10px; font-weight: 800; }
 .frame-state svg { width: 16px; height: 16px; }
 .frame-badge { position: absolute; top: 9px; left: 9px; display: flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: 6px; color: white; background: rgb(12 48 66 / 82%); font-size: 8px; font-weight: 800; backdrop-filter: blur(5px); }
-.frame-badge .status-dot { width: 6px; height: 6px; margin: 0; box-shadow: none; }
 .frame-badge.warning { color: #513612; background: rgb(255 227 173 / 92%); }
 .camera-details { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 13px 0 0; }
 .camera-details div { padding: 8px 0 10px; }
@@ -362,7 +381,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 @keyframes viewer-in { from { opacity: 0; transform: scale(.985); } }
 
 @media (max-width: 1080px) {
-  .dashboard-grid { grid-template-columns: minmax(0, 1.45fr) 310px; }
+  .dashboard-grid { grid-template-columns: minmax(0, 1.25fr) minmax(340px, 1fr); }
   .content { padding-inline: 24px; }
   .file-policy { display: none; }
 }
@@ -373,14 +392,8 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
   .login-context-copy h1 { max-width: 620px; font-size: 42px; }
   .login-context-copy > p:last-child { margin-top: 14px; }
   .login-panel { min-height: auto; padding-block: 60px; }
-  .sidebar { transform: translateX(-105%); transition: transform 320ms var(--ease); box-shadow: 22px 0 55px rgb(0 26 42 / 28%); }
-  .drawer-open .sidebar { transform: none; }
-  .sidebar-close { display: grid; }
-  .drawer-scrim { position: fixed; inset: 0; z-index: 29; display: block; border: 0; background: rgb(7 26 38 / 42%); opacity: 0; pointer-events: none; transition: opacity 250ms ease; }
-  .drawer-open .drawer-scrim { opacity: 1; pointer-events: auto; }
-  .main-shell { margin-left: 0; }
-  .menu-button { display: grid; }
   .dashboard-grid { grid-template-columns: 1fr; }
+  .dashboard-grid > .detection-panel { gap: 22px; }
   .right-column { grid-template-columns: 1fr 1fr; }
   .code-viewer, .code-viewer .shiki { min-height: 440px; }
 }
@@ -388,7 +401,11 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 @media (max-width: 720px) {
   .tour-launch { width: 38px; padding: 0; justify-content: center; }
   .tour-launch span { display: none; }
-  .topbar { height: 68px; padding: 0 16px; }
+  .topbar { height: 68px; gap: 12px; padding: 0 16px 0 0; }
+  .topbar-brand { width: 210px; gap: 9px; padding-inline: 16px; }
+  .topbar-logo { width: 34px; height: 34px; }
+  .topbar-brand strong { font-size: 18px; }
+  .topbar-brand-title span { font-size: 6px; letter-spacing: .08em; }
   .current-date { display: none; }
   .content { padding: 24px 16px 40px; }
   .page-intro { display: block; margin-bottom: 21px; }
@@ -396,7 +413,9 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
   .page-intro h1 { font-size: 36px; }
   .right-column { grid-template-columns: 1fr; }
   .detection-intro { align-items: flex-start; gap: 13px; }
-  .detection-photo { width: 56px; height: 56px; }
+  .detection-photo { width: 64px; height: 64px; }
+  .dashboard-grid > .detection-panel { align-items: stretch; flex-direction: column; padding: 20px; gap: 20px; }
+  .dashboard-grid .detection-actions { max-width: none; padding: 18px 0 0; border-left: 0; border-top: 1px solid var(--line); }
   .detection-actions .run-button { width: 100%; }
   .workspace-header { align-items: stretch; flex-direction: column; padding: 14px; }
   .run-button { justify-content: center; }
@@ -424,7 +443,13 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
   .login-form-heading { margin-bottom: 28px; }
   .logout-button { min-height: 40px; padding-inline: 13px; }
   .location-chip { max-width: 125px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .topbar-actions { gap: 7px; }
+  .topbar { gap: 8px; padding-right: 12px; }
+  .topbar-actions { gap: 4px; }
+  .topbar-actions .icon-button, .topbar-actions .tour-launch { width: 32px; }
+  .topbar-brand { width: 188px; gap: 8px; padding-inline: 12px; }
+  .topbar-brand strong { font-size: 16px; }
+  .topbar-logo { width: 30px; height: 30px; }
+  .topbar-actions .logout-button { padding-inline: 9px; }
   .page-intro h1 { font-size: 32px; }
   .intro-copy { font-size: 13px; }
   .panel { padding: 17px; }
@@ -432,6 +457,12 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
   .metrics div { padding-inline: 6px; }
   .result-visual { height: 138px; }
   .toast { right: 16px; bottom: 16px; }
+}
+
+@media (max-width: 360px) {
+  .topbar-brand { width: 150px; gap: 6px; padding-inline: 10px; }
+  .topbar-logo { width: 28px; height: 28px; }
+  .topbar-brand-title span { font-size: 5.3px; letter-spacing: .03em; }
 }
 
 @media (prefers-reduced-motion: reduce) {

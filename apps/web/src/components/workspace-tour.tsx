@@ -3,7 +3,7 @@
 import { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "./icon";
 
-const STORAGE_KEY = "brin-workspace-tour-v2";
+const STORAGE_KEY = "brin-workspace-tour-v3";
 
 const steps = [
   {
@@ -16,19 +16,19 @@ const steps = [
     target: "tour-camera",
     eyebrow: "Petunjuk 2 dari 3",
     title: "Kamera parkir",
-    body: "Lihat gambar terbaru atau buka Real-Time Cam dari menu Kamera. Jika kamera sedang offline, periksa status perangkat.",
+    body: "Lihat gambar terbaru atau buka Real-Time Cam dari panel Kamera. Jika kamera sedang offline, periksa kondisi perangkat.",
   },
   {
     target: "tour-device",
     eyebrow: "Petunjuk 3 dari 3",
     title: "Kondisi perangkat",
-    body: "Pantau koneksi kamera, kesehatan Jetson, suhu, memori, dan penyimpanan di menu Kondisi perangkat.",
+    body: "Panel Kondisi perangkat menampilkan koneksi kamera, kesehatan Jetson, suhu, memori, dan penyimpanan tanpa berpindah halaman.",
   },
 ] as const;
 
 type Rect = { top: number; left: number; width: number; height: number };
 
-export function WorkspaceTour({ request = 0, onStepChange }: { request?: number; onStepChange?: (step: number | null) => void }) {
+export function WorkspaceTour({ request = 0 }: { request?: number }) {
   const [active, setActive] = useState(false);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
@@ -60,20 +60,20 @@ export function WorkspaceTour({ request = 0, onStepChange }: { request?: number;
   }, [request, open]);
 
   useEffect(() => {
-    onStepChange?.(active ? step : null);
     if (!active) return;
+    document.getElementById(steps[step].target)?.scrollIntoView({ block: "center", behavior: "instant" });
     const initialUpdate = window.requestAnimationFrame(updateRect);
     const delayedUpdate = window.setTimeout(updateRect, 380);
     window.addEventListener("resize", updateRect);
     window.addEventListener("scroll", updateRect, true);
-    nextButton.current?.focus();
+    nextButton.current?.focus({ preventScroll: true });
     return () => {
       window.cancelAnimationFrame(initialUpdate);
       window.clearTimeout(delayedUpdate);
       window.removeEventListener("resize", updateRect);
       window.removeEventListener("scroll", updateRect, true);
     };
-  }, [active, step, updateRect, onStepChange]);
+  }, [active, step, updateRect]);
 
   const close = () => {
     localStorage.setItem(STORAGE_KEY, "complete");

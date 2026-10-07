@@ -19,6 +19,8 @@
 
 ## Apa yang dapat dilakukan?
 
+Satu dashboard tanpa sidebar: panel **Jalankan deteksi**, **Kamera**, dan **Kondisi perangkat** tampil bersama. Header menampilkan logo dan judul BRIN dalam blok biru di kiri; UI tidak menampilkan kode atau penjelajah berkas.
+
 - **Jalankan deteksi** — satu tombol untuk menjalankan hanya `Test19Agus_optimized_fps_big_ui.py` di Jetson dan menampilkan hasilnya; tidak ada penjelajah berkas di UI.
 - **Kamera** — gambar berkala serta Real-Time Cam MJPEG channel HD dalam tampilan penuh.
 - **Kondisi perangkat nyata** — menampilkan GPU, suhu, memori, penyimpanan, uptime, status kamera, dan latensi.
@@ -72,7 +74,7 @@ Hanya Caddy yang dipublikasikan. Container API dan web tidak membuka port langsu
 
 ### 1. Tools
 
-- Node.js 20+
+- Node.js 24 (sesuai CI dan image produksi)
 - Python 3.11+
 - Akses Tailnet menuju Jetson
 - SSH private key khusus backend
@@ -103,6 +105,32 @@ npm run dev
 ```
 
 Buka [http://localhost:3000](http://localhost:3000).
+
+### Preview perubahan sebelum deploy
+
+Untuk konfigurasi lokal yang sudah tersedia, buka dua terminal PowerShell. Jangan menyalin ulang `.env.example` ke `.env` atau `.env.local` karena dapat menimpa konfigurasi privat yang sudah benar.
+
+Terminal backend:
+
+```powershell
+cd C:\Kuliah\WebsiteBRINSSH\apps\api
+.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Terminal frontend:
+
+```powershell
+cd C:\Kuliah\WebsiteBRINSSH\apps\web
+npm run dev -- --hostname 127.0.0.1 --port 3000
+```
+
+Buka `http://localhost:3000`, login seperti biasa, dan tinjau dashboard. Pastikan `apps/web/.env.local` menggunakan `NEXT_PUBLIC_API_URL=http://localhost:8000`; backend lokal menggunakan `FRONTEND_ORIGIN=http://localhost:3000` dan `AUTH_COOKIE_SECURE=false` untuk HTTP lokal. Jangan mengubah cookie HTTPS produksi.
+
+Perubahan frontend langsung terlihat lewat hot reload. Server lokal tidak mengganti container Jetson atau URL produksi. Namun backend lokal tetap mengakses Jetson nyata: klik **Jalankan deteksi kendaraan** hanya jika memang ingin memulai proses, termasuk kemungkinan penulisan ke Firebase.
+
+Preview tidak memerlukan commit atau push. Jika deployment otomatis aktif, push/merge ke `main` dapat memperbarui produksi setelah CI berhasil, jadi lakukan hanya setelah menyetujui preview.
+
+Untuk memeriksa tata letak tanpa kredensial login, jalankan `npm run test:e2e` tanpa `BRIN_E2E_PASSWORD`. Test browser memakai respons API contoh (bukan bypass autentikasi aplikasi) dan menyimpan screenshot desktop/mobile di `apps/web/test-results/`. Gambar dan metrik pada screenshot test bukan data perangkat aktual.
 
 ## Variabel penting
 

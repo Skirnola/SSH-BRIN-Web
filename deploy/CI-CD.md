@@ -179,7 +179,9 @@ Tailscale Serve/Funnel remains active; it does not need to be restarted for norm
 
 ## Release checklist: focused vehicle-detection dashboard
 
-The dashboard now has three sections: **Jalankan deteksi**, **Kamera**, and **Kondisi perangkat**. File browsing and code viewing are no longer exposed in the dashboard UI.
+The dashboard shows **Jalankan deteksi**, **Kamera**, and **Kondisi perangkat** together on one page, without a sidebar or menu switching. The top-left header contains a compact blue BRIN logo-and-title block. File browsing and code viewing are not exposed in the dashboard UI.
+
+Preview frontend changes locally before pushing to `main`; see the preview instructions in the root README. Local hot reload does not deploy to the Jetson. If automatic deployment is enabled, pushing to `main` can update production after CI succeeds.
 
 Before deploying this release:
 
@@ -204,7 +206,7 @@ Before deploying this release:
 
 3. Push or merge the release into `main`. A push to `development` runs quality checks only; it does not update the live website. A push to `main` publishes images and deploys only when `ENABLE_JETSON_DEPLOY=true`, a matching runner is online, and any `jetson-production` environment approval is granted. Otherwise use the manual workflow dispatch described above.
 
-4. After deployment, confirm all three menus, camera snapshots, Real-Time Cam, device metrics, logout, and the updated tutorial. Intentionally start one detection session, then stop or close it and verify the host process exits. Do not treat the basic HTTP health check as proof that camera or detection hardware works.
+4. After deployment, confirm all three panels appear together, with no sidebar, and check camera snapshots, Real-Time Cam, device metrics, logout, and the updated tutorial. Intentionally start one detection session, then stop or close it and verify the host process exits. Do not treat the basic HTTP health check as proof that camera or detection hardware works.
 
 ## 7. Normal release workflow
 
