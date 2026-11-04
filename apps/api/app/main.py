@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from .auth import AuthenticatedUser, LoginRequest, REFRESH_COOKIE, SESSION_COOKIE, authenticate_with_firebase, require_authenticated_user, set_session_cookies
+from .cameras import CameraTarget, get_camera_target
 from .config import Settings, get_settings
 from .detection import list_detection_scripts, stream_detection_mjpeg, validate_detection_script
 from .jetson import check_connection, get_cached_camera_frame, get_system_health, list_directory, read_text_file, refresh_camera_frame, stream_camera_mjpeg
@@ -22,11 +23,11 @@ app = FastAPI(
     redoc_url=None,
     openapi_url="/openapi.json" if settings.api_docs_enabled else None,
 )
-_camera_refresh_task: asyncio.Task[bytes] | None = None
-_camera_frame_cache: bytes | None = None
-_camera_frame_captured_at = 0.0
-_camera_frame_lock = asyncio.Lock()
-_camera_cache_path = Path(__file__).resolve().parent.parent / ".cache" / f"camera-frame-{settings.camera_ip}.jpg"
+_camera_refresh_tasks: dict[str, asyncio.Task[bytes]] = {}
+_camera_frame_caches: dict[str, bytes] = {}
+_camera_frame_captured_at: dict[str, float] = {}
+_camera_frame_locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+_camera_cache_directory = Path(__file__).resolve().parent.parent / ".cache"
 _detection_lock = asyncio.Lock()
 _active_detection: str | None = None
 _system_health_lock = asyncio.Lock()
@@ -41,22 +42,27 @@ _LOGIN_WINDOW_SECONDS = 300
 _LOGIN_FAILURE_LIMIT = 5
 
 
-def _store_local_camera_frame(frame: bytes) -> None:
-    _camera_cache_path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = _camera_cache_path.with_suffix(".tmp")
+def _local_camera_cache_path(target: CameraTarget) -> Path:
+    return _camera_cache_directory / f"camera-frame-{target.ip}.jpg"
+
+
+def _store_local_camera_frame(target: CameraTarget, frame: bytes) -> None:
+    cache_path = _local_camera_cache_path(target)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = cache_path.with_suffix(".tmp")
     temporary.write_bytes(frame)
-    temporary.replace(_camera_cache_path)
+    temporary.replace(cache_path)
 
 
-def _finish_camera_refresh(task: asyncio.Task[bytes]) -> None:
-    global _camera_refresh_task, _camera_frame_cache, _camera_frame_captured_at
+def _finish_camera_refresh(target: CameraTarget, task: asyncio.Task[bytes]) -> None:
     try:
-        _camera_frame_cache = task.result()
-        _camera_frame_captured_at = time.time()
-        _store_local_camera_frame(_camera_frame_cache)
+        frame = task.result()
+        _camera_frame_caches[target.id] = frame
+        _camera_frame_captured_at[target.id] = time.time()
+        _store_local_camera_frame(target, frame)
     except (asyncio.CancelledError, Exception):
         pass
-    _camera_refresh_task = None
+    _camera_refresh_tasks.pop(target.id, None)
 
 app.add_middleware(
     CORSMiddleware,
@@ -209,28 +215,32 @@ async def system_health(config: Settings = Depends(get_settings)) -> SystemHealt
         ) from error
 
 
-@app.get("/api/v1/cameras/main/frame", dependencies=[Depends(require_authenticated_user)])
-async def camera_frame(config: Settings = Depends(get_settings)) -> Response:
-    global _camera_refresh_task, _camera_frame_cache, _camera_frame_captured_at
+@app.get("/api/v1/cameras/{camera_id}/frame", dependencies=[Depends(require_authenticated_user)])
+async def camera_frame(camera_id: str, config: Settings = Depends(get_settings)) -> Response:
     try:
-        async with _camera_frame_lock:
-            if _camera_frame_cache is None:
-                if _camera_cache_path.exists():
-                    _camera_frame_cache = _camera_cache_path.read_bytes()
-                    _camera_frame_captured_at = _camera_cache_path.stat().st_mtime
+        target = get_camera_target(config, camera_id)
+        async with _camera_frame_locks[target.id]:
+            if target.id not in _camera_frame_caches:
+                cache_path = _local_camera_cache_path(target)
+                if cache_path.exists():
+                    _camera_frame_caches[target.id] = cache_path.read_bytes()
+                    _camera_frame_captured_at[target.id] = cache_path.stat().st_mtime
                 else:
                     try:
-                        _camera_frame_cache, _camera_frame_captured_at = await get_cached_camera_frame(config)
+                        frame, captured_at = await get_cached_camera_frame(config, target)
                     except asyncssh.SFTPNoSuchFile:
-                        _camera_frame_cache = await refresh_camera_frame(config)
-                        _camera_frame_captured_at = time.time()
-                    _store_local_camera_frame(_camera_frame_cache)
-            frame = _camera_frame_cache
-            captured_at = _camera_frame_captured_at
+                        frame = await refresh_camera_frame(config, target)
+                        captured_at = time.time()
+                    _camera_frame_caches[target.id] = frame
+                    _camera_frame_captured_at[target.id] = captured_at
+                    _store_local_camera_frame(target, frame)
+            frame = _camera_frame_caches[target.id]
+            captured_at = _camera_frame_captured_at[target.id]
 
-        if time.time() - captured_at > 30 and _camera_refresh_task is None:
-            _camera_refresh_task = asyncio.create_task(refresh_camera_frame(config))
-            _camera_refresh_task.add_done_callback(_finish_camera_refresh)
+        if time.time() - captured_at > 30 and target.id not in _camera_refresh_tasks:
+            task = asyncio.create_task(refresh_camera_frame(config, target))
+            _camera_refresh_tasks[target.id] = task
+            task.add_done_callback(lambda completed, selected=target: _finish_camera_refresh(selected, completed))
 
         return Response(
             content=frame,
@@ -238,18 +248,26 @@ async def camera_frame(config: Settings = Depends(get_settings)) -> Response:
             headers={
                 "Cache-Control": "no-store, max-age=0",
                 "X-Captured-At": str(int(captured_at)),
+                "X-Camera-Id": target.id,
             },
         )
-    except (asyncssh.Error, OSError, RuntimeError, ValueError) as error:
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+    except (asyncssh.Error, OSError, RuntimeError) as error:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Frame kamera tidak tersedia",
         ) from error
 
 
-@app.get("/api/v1/cameras/main/live", dependencies=[Depends(require_authenticated_user)])
-async def camera_live(config: Settings = Depends(get_settings)) -> StreamingResponse:
+@app.get("/api/v1/cameras/{camera_id}/live", dependencies=[Depends(require_authenticated_user)])
+async def camera_live(camera_id: str, config: Settings = Depends(get_settings)) -> StreamingResponse:
     global _live_viewers
+    try:
+        target = get_camera_target(config, camera_id)
+    except ValueError as error:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(error)) from error
+
     async with _live_viewers_lock:
         if _live_viewers >= config.camera_max_live_viewers:
             raise HTTPException(
@@ -262,7 +280,7 @@ async def camera_live(config: Settings = Depends(get_settings)) -> StreamingResp
     async def limited_stream():
         global _live_viewers
         try:
-            async for chunk in stream_camera_mjpeg(config):
+            async for chunk in stream_camera_mjpeg(config, target):
                 yield chunk
         finally:
             async with _live_viewers_lock:
@@ -275,6 +293,7 @@ async def camera_live(config: Settings = Depends(get_settings)) -> StreamingResp
             "Cache-Control": "no-store, no-cache, must-revalidate",
             "Pragma": "no-cache",
             "X-Accel-Buffering": "no",
+            "X-Camera-Id": target.id,
         },
     )
 

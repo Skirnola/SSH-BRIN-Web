@@ -32,10 +32,12 @@ class FileContent(BaseModel):
 
 
 class CameraHealth(BaseModel):
-    id: str = "CAM-01"
+    id: str = "camera-1"
+    label: str = "Kamera 1"
     ip: str
     status: Literal["online", "offline"]
     latency_ms: float | None
+    detection_enabled: bool = False
 
 
 class JetsonHealth(BaseModel):
@@ -51,5 +53,6 @@ class JetsonHealth(BaseModel):
 
 class SystemHealth(BaseModel):
     camera: CameraHealth
+    cameras: list[CameraHealth]
     jetson: JetsonHealth
     updated_at: str

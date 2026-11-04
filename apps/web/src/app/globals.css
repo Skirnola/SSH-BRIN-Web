@@ -21,7 +21,7 @@ body { color: var(--primary-ink); font-family: var(--font-manrope), Arial, sans-
 button { color: inherit; font: inherit; user-select: none; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button:disabled { transform: none !important; }
-:is(.login-submit, .run-button, .logout-button, .tour-launch, .tour-next, .tour-back, .refresh-button, .icon-button, .viewer-close, .viewer-mode-switch button, .start-detection-button, .secondary-detection-button, .stop-detection-button):active:not(:disabled) { transform: translateY(1px) scale(.975); }
+:is(.login-submit, .run-button, .logout-button, .tour-launch, .tour-next, .tour-back, .refresh-button, .icon-button, .viewer-close, .viewer-mode-switch button, .viewer-camera-switch button, .camera-selector button, .start-detection-button, .secondary-detection-button, .stop-detection-button):active:not(:disabled) { transform: translateY(1px) scale(.975); }
 button:focus-visible, [tabindex]:focus-visible { outline: 3px solid color-mix(in srgb, var(--research-amber) 76%, white); outline-offset: 2px; }
 svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
 
@@ -296,6 +296,15 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .result-source { display: flex; align-items: center; gap: 6px; padding-top: 11px; border-top: 1px solid var(--line); color: var(--muted-ink); font-size: 9px; }
 .result-source svg { width: 13px; height: 13px; }
 .camera-actions { display: flex; align-items: center; gap: 7px; }
+.camera-selector { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin: -4px 0 13px; }
+.camera-selector button { display: flex; min-width: 0; min-height: 39px; align-items: center; justify-content: center; gap: 7px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; color: #536772; background: #f8fafb; font-size: 10px; font-weight: 800; cursor: pointer; transition: transform 140ms var(--ease), color 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 180ms ease; }
+.camera-selector button:hover { border-color: #9fc7df; color: #075a99; background: #f1f8fc; }
+.camera-selector button.active { border-color: #83b9d9; color: #075a99; background: var(--soft-blue); box-shadow: inset 0 0 0 1px rgb(8 104 178 / 8%); }
+.camera-selector button .status-dot { width: 6px; height: 6px; margin: 0; box-shadow: none; }
+.camera-selector button[data-status="offline"] .status-dot { background: var(--brin-red); }
+.camera-selector button[data-status="unknown"] .status-dot { background: #a6b2b8; }
+.camera-selector small { padding: 2px 4px; border-radius: 4px; color: #6f5818; background: #fff0c8; font-size: 7px; letter-spacing: .04em; text-transform: uppercase; }
+.camera-health-metrics dd.offline { color: #a23c35; }
 .expand-button { color: var(--brin-blue); background: #f3f8fb; }
 .camera-frame { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: 7px; background: #dfe7e8; }
 .camera-frame > img { display: block; width: 100%; height: 100%; object-fit: cover; animation: content-swap 300ms var(--ease) both; }
@@ -310,12 +319,16 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 
 .camera-viewer { position: fixed; inset: 0; z-index: 100; display: grid; grid-template-rows: 76px minmax(0, 1fr) 48px; color: #edf5f7; background: #07131a; animation: viewer-in 240ms var(--ease); }
 .camera-viewer-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 0 24px; border-bottom: 1px solid rgb(255 255 255 / 10%); background: #0b1b24; }
-.viewer-camera-name, .viewer-controls, .viewer-mode-switch { display: flex; align-items: center; }
+.viewer-camera-name, .viewer-controls, .viewer-mode-switch, .viewer-camera-switch { display: flex; align-items: center; }
 .viewer-camera-name { min-width: 0; gap: 11px; }
 .viewer-device-photo { width: 42px; height: 42px; flex: 0 0 auto; border-radius: 8px; object-fit: cover; }
 .viewer-camera-name span { display: block; margin-bottom: 3px; color: #8da7b4; font-size: 9px; font-weight: 700; letter-spacing: .04em; }
 .viewer-camera-name h2 { overflow: hidden; margin: 0; color: white; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .viewer-controls { gap: 12px; }
+.viewer-camera-switch { gap: 3px; padding: 4px; border: 1px solid rgb(255 255 255 / 8%); border-radius: 9px; }
+.viewer-camera-switch button { display: grid; width: 32px; height: 32px; place-items: center; border: 0; border-radius: 6px; color: #91a8b3; background: transparent; font-size: 10px; font-weight: 800; cursor: pointer; transition: transform 140ms var(--ease), color 160ms ease, background 160ms ease; }
+.viewer-camera-switch button:hover { color: white; background: rgb(255 255 255 / 8%); }
+.viewer-camera-switch button.active { color: #102a38; background: #dcedf6; }
 .viewer-mode-switch { gap: 3px; padding: 4px; border-radius: 9px; background: rgb(255 255 255 / 7%); }
 .viewer-mode-switch button { display: flex; min-height: 36px; align-items: center; gap: 7px; padding: 0 13px; border: 0; border-radius: 6px; color: #9bb0ba; background: transparent; font-size: 10px; font-weight: 800; cursor: pointer; transition: transform 140ms var(--ease), color 180ms ease, background 180ms ease, box-shadow 180ms ease; }
 .viewer-mode-switch button.active { color: #102a38; background: #f7fafb; box-shadow: 0 3px 8px rgb(0 0 0 / 14%); }
@@ -363,7 +376,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .toast strong { margin-bottom: 2px; font-size: 11px; }
 .toast div > span { color: #a9bfca; font-size: 9px; }
 
-.login-submit:active:not(:disabled), .password-toggle:active:not(:disabled), .run-button:active:not(:disabled), .logout-button:active:not(:disabled), .tour-launch:active:not(:disabled), .tour-next:active:not(:disabled), .tour-back:active:not(:disabled), .refresh-button:active:not(:disabled), .icon-button:active:not(:disabled), .viewer-close:active:not(:disabled), .viewer-mode-switch button:active:not(:disabled), .start-detection-button:active:not(:disabled), .secondary-detection-button:active:not(:disabled), .stop-detection-button:active:not(:disabled), .folder-button:active:not(:disabled), .file-button:active:not(:disabled) { transform: translateY(1px) scale(.975); }
+.login-submit:active:not(:disabled), .password-toggle:active:not(:disabled), .run-button:active:not(:disabled), .logout-button:active:not(:disabled), .tour-launch:active:not(:disabled), .tour-next:active:not(:disabled), .tour-back:active:not(:disabled), .refresh-button:active:not(:disabled), .icon-button:active:not(:disabled), .viewer-close:active:not(:disabled), .viewer-mode-switch button:active:not(:disabled), .viewer-camera-switch button:active:not(:disabled), .camera-selector button:active:not(:disabled), .start-detection-button:active:not(:disabled), .secondary-detection-button:active:not(:disabled), .stop-detection-button:active:not(:disabled), .folder-button:active:not(:disabled), .file-button:active:not(:disabled) { transform: translateY(1px) scale(.975); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes auth-scan { from { transform: translateX(0); } to { transform: translateX(150%); } }
@@ -428,6 +441,7 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
   .camera-viewer-header { min-height: 124px; align-items: flex-start; flex-direction: column; gap: 12px; padding: 16px; }
   .viewer-controls { width: 100%; justify-content: space-between; }
   .viewer-mode-switch { flex: 1; }
+  .viewer-camera-switch { flex: 0 0 auto; }
   .viewer-mode-switch button { flex: 1; justify-content: center; padding-inline: 8px; }
   .camera-viewer-stage { padding: 10px; }
   .camera-viewer-footer { padding: 0 14px; }
@@ -453,6 +467,9 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
   .page-intro h1 { font-size: 32px; }
   .intro-copy { font-size: 13px; }
   .panel { padding: 17px; }
+  .camera-selector { gap: 5px; }
+  .camera-selector button { gap: 5px; padding-inline: 6px; }
+  .camera-selector small { display: none; }
   .metrics { gap: 5px; }
   .metrics div { padding-inline: 6px; }
   .result-visual { height: 138px; }

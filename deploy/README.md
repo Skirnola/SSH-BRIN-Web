@@ -88,7 +88,7 @@ BIND_ADDRESS=<TAILSCALE_IP>
 PUBLIC_ORIGIN=http://<TAILSCALE_IP>:3000
 ```
 
-Copy the Firebase values from the existing private backend `.env`. Never commit `deploy/jetson.env`.
+Copy the Firebase values and all camera credentials from the existing private backend `.env`. Camera 2 and 3 require `CAMERA_2_USERNAME/PASSWORD` and `CAMERA_3_USERNAME/PASSWORD`. Never commit `deploy/jetson.env` or place camera passwords in frontend variables.
 
 For this first HTTP-over-Tailnet test, keep:
 
@@ -163,10 +163,10 @@ http://<JETSON_TAILSCALE_IP>:3000
 Test in this order:
 
 1. Firebase login.
-2. Workspace file tree.
-3. Device condition and camera frame.
-4. Fullscreen Real-Time Cam.
-5. One approved detection script, only when its Firebase side effects are acceptable.
+2. The three dashboard panels without a sidebar.
+3. Device condition and snapshots for Cameras 1, 2, and 3.
+4. Fullscreen Real-Time Cam for each camera on channel `101`.
+5. One approved Camera 1 detection script, only when its Firebase side effects are acceptable.
 
 ## Operations
 

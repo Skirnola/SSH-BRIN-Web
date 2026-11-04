@@ -15,6 +15,14 @@ class Settings(BaseSettings):
     camera_ip: str = "10.21.1.92"
     camera_config_file: str = "Mobil_Pos.py"
     camera_frame_cache: str = "/home/jetson/.cache/brin-edge/camera-frame-10.21.1.92.jpg"
+    camera_2_ip: str = "10.21.1.93"
+    camera_2_username: SecretStr
+    camera_2_password: SecretStr
+    camera_2_frame_cache: str = "/home/jetson/.cache/brin-edge/camera-frame-10.21.1.93.jpg"
+    camera_3_ip: str = "10.21.1.94"
+    camera_3_username: SecretStr
+    camera_3_password: SecretStr
+    camera_3_frame_cache: str = "/home/jetson/.cache/brin-edge/camera-frame-10.21.1.94.jpg"
     camera_live_channel: int = 101
     camera_max_live_viewers: int = 4
     detection_python: str = "/home/jetson/yolo-env/bin/python"

@@ -10,19 +10,19 @@ const steps = [
     target: "tour-detection",
     eyebrow: "Petunjuk 1 dari 3",
     title: "Jalankan deteksi",
-    body: "Klik Jalankan deteksi kendaraan untuk melihat hasil analisis langsung. Sistem hanya menjalankan program deteksi yang sudah ditetapkan.",
+    body: "Klik Jalankan deteksi kendaraan untuk melihat hasil analisis Kamera 1. Kamera 2 dan 3 belum digunakan untuk deteksi.",
   },
   {
     target: "tour-camera",
     eyebrow: "Petunjuk 2 dari 3",
     title: "Kamera parkir",
-    body: "Lihat gambar terbaru atau buka Real-Time Cam dari panel Kamera. Jika kamera sedang offline, periksa kondisi perangkat.",
+    body: "Pilih Kamera 1, 2, atau 3 untuk melihat gambar terbaru dan Real-Time Cam. Semua feed memakai channel 101 HD.",
   },
   {
     target: "tour-device",
     eyebrow: "Petunjuk 3 dari 3",
     title: "Kondisi perangkat",
-    body: "Panel Kondisi perangkat menampilkan koneksi kamera, kesehatan Jetson, suhu, memori, dan penyimpanan tanpa berpindah halaman.",
+    body: "Panel Kondisi perangkat merangkum koneksi ketiga kamera, kesehatan Jetson, suhu, memori, dan penyimpanan tanpa berpindah halaman.",
   },
 ] as const;
 

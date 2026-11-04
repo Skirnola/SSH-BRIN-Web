@@ -3,12 +3,17 @@
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { getCameraFrameUrl, getCameraLiveUrl, getDetectionLiveUrl, getSystemHealth } from "@/lib/jetson-api";
+import { type CameraHealth, getCameraFrameUrl, getCameraLiveUrl, getDetectionLiveUrl, getSystemHealth } from "@/lib/jetson-api";
 import { useWorkspaceAuth } from "./auth-gate";
 import { Icon } from "./icon";
 import { WorkspaceTour } from "./workspace-tour";
 
 const DETECTION_SCRIPT = "Test19Agus_optimized_fps_big_ui.py";
+const FALLBACK_CAMERAS: CameraHealth[] = [
+  { id: "camera-1", label: "Kamera 1", ip: "10.21.1.92", status: "offline", latency_ms: null, detection_enabled: true },
+  { id: "camera-2", label: "Kamera 2", ip: "10.21.1.93", status: "offline", latency_ms: null, detection_enabled: false },
+  { id: "camera-3", label: "Kamera 3", ip: "10.21.1.94", status: "offline", latency_ms: null, detection_enabled: false },
+];
 function StatusDot() {
   return <span className="status-dot" aria-hidden="true" />;
 }
@@ -17,6 +22,7 @@ export function EdgeWorkspace() {
   const { signOut } = useWorkspaceAuth();
   const [tourRequest, setTourRequest] = useState(0);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [selectedCameraId, setSelectedCameraId] = useState<CameraHealth["id"]>("camera-1");
   const [frameVersion, setFrameVersion] = useState(0);
   const [frameLoading, setFrameLoading] = useState(true);
   const [frameFailed, setFrameFailed] = useState(false);
@@ -75,6 +81,18 @@ export function EdgeWorkspace() {
     setFrameVersion(Date.now());
   };
 
+  const selectCamera = (cameraId: CameraHealth["id"]) => {
+    setSelectedCameraId(cameraId);
+    setFrameLoading(true);
+    setFrameFailed(false);
+    setFrameVersion((version) => version + 1);
+    setLiveFailed(false);
+    if (viewerOpen && viewerMode === "live") {
+      setLiveLoading(true);
+      setLiveSession((session) => session + 1);
+    }
+  };
+
   const closeCameraViewer = () => {
     setViewerOpen(false);
     setViewerMode("image");
@@ -110,6 +128,10 @@ export function EdgeWorkspace() {
   };
 
   const health = systemHealth.data;
+  const cameras = health?.cameras?.length ? health.cameras : FALLBACK_CAMERAS;
+  const selectedCamera = cameras.find((camera) => camera.id === selectedCameraId) ?? cameras[0];
+  const onlineCameraCount = health?.cameras?.filter((camera) => camera.status === "online").length ?? 0;
+  const allCamerasOnline = health ? onlineCameraCount === cameras.length : false;
   const updatedLabel = health
     ? new Date(health.updated_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }).replace(".", ":")
     : "—";
@@ -130,7 +152,7 @@ export function EdgeWorkspace() {
             <button className="tour-launch" type="button" onClick={() => setTourRequest((value) => value + 1)} aria-label="Buka petunjuk"><Icon name="help" /><span>Petunjuk</span></button>
             <div className="notification-wrap">
               <button className="icon-button" type="button" aria-label="Buka notifikasi" aria-expanded={notificationsOpen} onClick={() => setNotificationsOpen((open) => !open)}><Icon name="bell" /></button>
-              {notificationsOpen && <div className="notification-panel" role="status"><strong>{systemHealth.isError ? "Perangkat tidak dapat dijangkau" : "Status perangkat"}</strong><span>{health ? health.camera.status === "online" ? "Kamera dan Jetson terhubung." : "Kamera tidak dapat dijangkau." : "Kondisi perangkat belum tersedia."}</span></div>}
+              {notificationsOpen && <div className="notification-panel" role="status"><strong>{systemHealth.isError ? "Perangkat tidak dapat dijangkau" : "Status perangkat"}</strong><span>{health ? `${onlineCameraCount} dari ${cameras.length} kamera terhubung ke Jetson.` : "Kondisi perangkat belum tersedia."}</span></div>}
             </div>
             <button className="logout-button" type="button" onClick={() => void signOut()}><Icon name="arrow-right" /> Keluar</button>
           </div>
@@ -139,7 +161,7 @@ export function EdgeWorkspace() {
         <main className="content">
           <section className="page-intro" aria-labelledby="page-title">
             <div>
-              <p className="eyebrow">KST Samaun Samadikun · Kamera 01</p>
+              <p className="eyebrow">KST Samaun Samadikun · 3 kamera aktif</p>
               <h1 id="page-title">Pemantauan kendaraan</h1>
               <p className="intro-copy">Jalankan deteksi, pantau kamera, dan periksa kondisi Jetson dalam satu tampilan.</p>
             </div>
@@ -162,22 +184,25 @@ export function EdgeWorkspace() {
 
             <section id="tour-camera" className="panel camera-panel camera-workspace" aria-labelledby="camera-title">
               <div className="panel-heading">
-                <div><p className="panel-kicker">Frame terbaru</p><h2 id="camera-title">Kamera</h2></div>
+                <div><p className="panel-kicker">Frame terbaru · Channel 101 HD</p><h2 id="camera-title">Kamera</h2></div>
                 <div className="camera-actions">
-                  <button className="refresh-button" type="button" onClick={refreshCameraFrame} aria-label="Perbarui frame kamera"><Icon name="refresh" className={frameLoading ? "spinning" : undefined} /></button>
-                  <button className="refresh-button expand-button" type="button" onClick={() => { setViewerMode("image"); setViewerOpen(true); }} aria-label="Perbesar tampilan kamera"><Icon name="maximize" /></button>
+                  <button className="refresh-button" type="button" onClick={refreshCameraFrame} aria-label={`Perbarui frame ${selectedCamera.label}`}><Icon name="refresh" className={frameLoading ? "spinning" : undefined} /></button>
+                  <button className="refresh-button expand-button" type="button" onClick={() => { setViewerMode("image"); setViewerOpen(true); }} aria-label={`Perbesar tampilan ${selectedCamera.label}`}><Icon name="maximize" /></button>
                 </div>
               </div>
+              <div className="camera-selector" role="group" aria-label="Pilih kamera">
+                {cameras.map((camera) => <button key={camera.id} type="button" data-status={health ? camera.status : "unknown"} className={selectedCamera.id === camera.id ? "active" : undefined} aria-label={camera.label} aria-pressed={selectedCamera.id === camera.id} onClick={() => selectCamera(camera.id)}><StatusDot /><span>{camera.label}</span>{camera.detection_enabled && <small>Deteksi</small>}</button>)}
+              </div>
               <div className="camera-frame">
-                {/* Frame is proxied by FastAPI; the browser never receives RTSP credentials. */}
+                {/* Frames are proxied by FastAPI; the browser never receives RTSP credentials. */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={frameFailed ? "/Camera1.jpg" : getCameraFrameUrl(frameVersion)} alt={frameFailed ? "Foto perangkat Kamera 1" : "Frame terbaru Kamera 1"} loading="lazy" onLoad={() => setFrameLoading(false)} onError={() => { setFrameLoading(false); setFrameFailed(true); }} />
-                {frameLoading && <div className="frame-state"><Icon name="refresh" className="spinning" /> Mengambil frame…</div>}
+                <img key={`${selectedCamera.id}-${frameVersion}`} src={frameFailed ? "/Camera1.jpg" : getCameraFrameUrl(selectedCamera.id, frameVersion)} alt={frameFailed ? `Foto referensi ${selectedCamera.label}` : `Frame terbaru ${selectedCamera.label}`} loading="lazy" onLoad={() => setFrameLoading(false)} onError={() => { setFrameLoading(false); setFrameFailed(true); }} />
+                {frameLoading && <div className="frame-state"><Icon name="refresh" className="spinning" /> Mengambil frame {selectedCamera.label}…</div>}
                 {frameFailed && <div className="frame-badge warning">Frame langsung belum tersedia</div>}
               </div>
-              <dl className="camera-details"><div><dt>Sumber</dt><dd>Camera 01</dd></div><div><dt>Alamat</dt><dd>{health?.camera.ip ?? "—"}</dd></div></dl>
-              <div className="result-source"><Icon name="camera" /> Diperbarui otomatis setiap 30 detik · tanpa deteksi</div>
-              <button className="camera-live-button" type="button" onClick={() => { setViewerOpen(true); selectLiveMode(); }}><Icon name="video" /> Buka Real-Time Cam</button>
+              <dl className="camera-details"><div><dt>Sumber</dt><dd>{selectedCamera.label}</dd></div><div><dt>Alamat</dt><dd>{selectedCamera.ip}</dd></div></dl>
+              <div className="result-source"><Icon name="camera" /> Diperbarui otomatis setiap 30 detik · deteksi hanya Kamera 1</div>
+              <button className="camera-live-button" type="button" onClick={() => { setViewerOpen(true); selectLiveMode(); }}><Icon name="video" /> Buka Real-Time Cam · {selectedCamera.label}</button>
             </section>
 
             <section id="tour-device" className="panel health-panel device-workspace" aria-labelledby="health-title">
@@ -185,13 +210,13 @@ export function EdgeWorkspace() {
                 <div><h2 id="health-title">Kondisi perangkat</h2><span className="updated-time">{health ? `Diperbarui ${updatedLabel}` : systemHealth.isError ? "Data tidak tersedia" : "Mengambil data nyata…"}</span></div>
                 <button className="refresh-button" type="button" onClick={() => void systemHealth.refetch()} aria-label="Perbarui kondisi perangkat"><Icon name="refresh" className={systemHealth.isFetching ? "spinning" : undefined} /></button>
               </div>
-              <div className={`overall-status${!health || health.camera.status === "offline" || health.jetson.status === "warning" ? " warning" : ""}`}>
-                <Icon name={health?.camera.status === "online" ? "check" : "x"} />
-                {health ? health.camera.status === "online" ? "Kamera dan Jetson terhubung" : "Kamera tidak dapat dijangkau" : systemHealth.isError ? "Kondisi perangkat tidak tersedia" : "Memeriksa perangkat…"}
+              <div className={`overall-status${!health || !allCamerasOnline || health.jetson.status === "warning" ? " warning" : ""}`}>
+                <Icon name={allCamerasOnline ? "check" : "x"} />
+                {health ? allCamerasOnline ? "3 kamera dan Jetson terhubung" : `${onlineCameraCount} dari ${cameras.length} kamera terhubung` : systemHealth.isError ? "Kondisi perangkat tidak tersedia" : "Memeriksa perangkat…"}
               </div>
               <article className="device-block">
-                <div className="device-title"><div className="device-identity"><Image className="device-photo" src="/Camera1.jpg" width={42} height={42} alt="Kamera 1" /><div><strong>CAM-01</strong><span>Kamera area parkir</span></div></div><span className={`status-label ${health?.camera.status === "online" ? "active" : "pending"}`}>{health?.camera.status === "online" ? "Terhubung" : health ? "Offline" : "Belum tersedia"}</span></div>
-                <dl className="metrics"><div><dt>Alamat IP</dt><dd>{health?.camera.ip ?? "—"}</dd></div><div><dt>Latensi</dt><dd>{health?.camera.latency_ms != null ? `${health.camera.latency_ms.toFixed(1)} ms` : "—"}</dd></div><div><dt>Jaringan</dt><dd>{health?.camera.status === "online" ? "Aktif" : "—"}</dd></div></dl>
+                <div className="device-title"><div className="device-identity"><Image className="device-photo" src="/Camera1.jpg" width={42} height={42} alt="Jaringan kamera parkir" /><div><strong>JARINGAN KAMERA</strong><span>3 kamera area parkir · Channel 101</span></div></div><span className={`status-label ${allCamerasOnline ? "active" : "pending"}`}>{health ? `${onlineCameraCount}/${cameras.length} aktif` : "Belum tersedia"}</span></div>
+                <dl className="metrics camera-health-metrics">{cameras.map((camera) => <div key={camera.id}><dt>{camera.label}</dt><dd className={camera.status === "offline" ? "offline" : undefined}>{camera.status === "online" ? camera.latency_ms != null ? `${camera.latency_ms.toFixed(1)} ms` : "Aktif" : "Offline"}</dd></div>)}</dl>
               </article>
               <article className="device-block">
                 <div className="device-title"><div className="device-identity"><Image className="device-photo" src="/Jetson.jpg" width={42} height={42} alt="NVIDIA Jetson" /><div><strong>{health?.jetson.id.toUpperCase() ?? "TEGRA-UBUNTU"}</strong><span>Komputer edge · uptime {uptimeDays != null ? `${uptimeDays} hari` : "—"}</span></div></div><span className={`status-label ${health?.jetson.status === "healthy" ? "healthy" : "pending"}`}>{health?.jetson.status === "healthy" ? "Sehat" : health ? "Peringatan" : "Belum tersedia"}</span></div>
@@ -205,11 +230,11 @@ export function EdgeWorkspace() {
 
       {viewerOpen && (
         <section className="camera-viewer" role="dialog" aria-modal="true" aria-labelledby="camera-viewer-title">
-          <header className="camera-viewer-header"><div className="viewer-camera-name"><Image className="viewer-device-photo" src="/Camera1.jpg" width={44} height={44} alt="" /><div><span>Kamera 01 · {health?.camera.ip ?? "alamat belum tersedia"}</span><h2 id="camera-viewer-title">Area parkir BRIN</h2></div></div><div className="viewer-controls"><div className="viewer-mode-switch" aria-label="Mode tampilan kamera"><button type="button" className={viewerMode === "image" ? "active" : undefined} aria-pressed={viewerMode === "image"} onClick={() => { setViewerMode("image"); setLiveLoading(false); }}><Icon name="image" /> Gambar</button><button type="button" className={viewerMode === "live" ? "active" : undefined} aria-pressed={viewerMode === "live"} onClick={selectLiveMode}><Icon name="video" /> Real-Time Cam</button></div><button className="viewer-close" type="button" onClick={closeCameraViewer} aria-label="Tutup tampilan kamera"><Icon name="x" /></button></div></header>
+          <header className="camera-viewer-header"><div className="viewer-camera-name"><Image className="viewer-device-photo" src="/Camera1.jpg" width={44} height={44} alt="" /><div><span>{selectedCamera.label} · {selectedCamera.ip}</span><h2 id="camera-viewer-title">Area parkir BRIN</h2></div></div><div className="viewer-controls"><div className="viewer-camera-switch" role="group" aria-label="Pilih kamera fullscreen">{cameras.map((camera) => <button key={camera.id} type="button" className={selectedCamera.id === camera.id ? "active" : undefined} aria-label={`Tampilkan ${camera.label}`} aria-pressed={selectedCamera.id === camera.id} onClick={() => selectCamera(camera.id)}>{camera.label.replace("Kamera ", "")}</button>)}</div><div className="viewer-mode-switch" aria-label="Mode tampilan kamera"><button type="button" className={viewerMode === "image" ? "active" : undefined} aria-pressed={viewerMode === "image"} onClick={() => { setViewerMode("image"); setLiveLoading(false); }}><Icon name="image" /> Gambar</button><button type="button" className={viewerMode === "live" ? "active" : undefined} aria-pressed={viewerMode === "live"} onClick={selectLiveMode}><Icon name="video" /> Real-Time Cam</button></div><button className="viewer-close" type="button" onClick={closeCameraViewer} aria-label="Tutup tampilan kamera"><Icon name="x" /></button></div></header>
           <div className="camera-viewer-stage">{viewerMode === "image" ? (
             <div className="viewer-media">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={frameFailed ? "/Camera1.jpg" : getCameraFrameUrl(frameVersion)} alt={frameFailed ? "Foto perangkat Kamera 1" : "Frame besar terbaru Kamera 1"} onLoad={() => setFrameLoading(false)} onError={() => { setFrameLoading(false); setFrameFailed(true); }} />
+              <img key={`viewer-${selectedCamera.id}-${frameVersion}`} src={frameFailed ? "/Camera1.jpg" : getCameraFrameUrl(selectedCamera.id, frameVersion)} alt={frameFailed ? `Foto referensi ${selectedCamera.label}` : `Frame besar terbaru ${selectedCamera.label}`} onLoad={() => setFrameLoading(false)} onError={() => { setFrameLoading(false); setFrameFailed(true); }} />
               {frameLoading && <div className="viewer-media-state"><Icon name="refresh" className="spinning" /><strong>Mengambil gambar terbaru…</strong></div>}
               <div className="viewer-overlay-label"><Icon name="image" /> Diperbarui setiap 30 detik</div>
             </div>
@@ -218,14 +243,14 @@ export function EdgeWorkspace() {
               {!liveFailed && (
                 // MJPEG streaming requires an unoptimized native image element.
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={getCameraLiveUrl(liveSession)} alt="Real-Time Cam Kamera 1" onLoad={() => setLiveLoading(false)} onError={() => { setLiveLoading(false); setLiveFailed(true); }} />
+                <img key={`live-${selectedCamera.id}-${liveSession}`} src={getCameraLiveUrl(selectedCamera.id, liveSession)} alt={`Real-Time Cam ${selectedCamera.label}`} onLoad={() => setLiveLoading(false)} onError={() => { setLiveLoading(false); setLiveFailed(true); }} />
               )}
               {liveLoading && <div className="viewer-media-state"><Icon name="refresh" className="spinning" /><strong>Menyiapkan Real-Time Cam…</strong><span>Stream utama kualitas tinggi dapat memerlukan waktu hingga 60 detik.</span></div>}
               {liveFailed && <div className="viewer-media-state error"><Icon name="x" /><strong>Real-Time Cam tidak tersedia</strong><span>Coba kembali ke mode Gambar atau sambungkan ulang.</span><button type="button" onClick={selectLiveMode}>Sambungkan ulang</button></div>}
               {!liveLoading && !liveFailed && <div className="viewer-overlay-label live"><StatusDot /> Real-Time Cam · Channel 101 HD</div>}
             </div>
           )}</div>
-          <footer className="camera-viewer-footer"><span><StatusDot /> {health?.camera.status === "online" ? "Kamera terhubung" : "Status kamera belum tersedia"}</span><span>Tekan Esc untuk menutup</span></footer>
+          <footer className="camera-viewer-footer"><span><StatusDot /> {selectedCamera.status === "online" ? `${selectedCamera.label} terhubung` : `Status ${selectedCamera.label} belum tersedia`}</span><span>Tekan Esc untuk menutup</span></footer>
         </section>
       )}
 

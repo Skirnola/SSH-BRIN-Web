@@ -65,6 +65,10 @@ jobs:
       JETSON_PRIVATE_KEY: /tmp/ci-jetson-key
       JETSON_KNOWN_HOSTS: /tmp/ci-known-hosts
       JETSON_WORKSPACE: /home/jetson/BRIN-RI-NDIP
+      CAMERA_2_USERNAME: ci-camera-2
+      CAMERA_2_PASSWORD: ci-placeholder
+      CAMERA_3_USERNAME: ci-camera-3
+      CAMERA_3_PASSWORD: ci-placeholder
       FIREBASE_WEB_API_KEY: ci-placeholder
       FIREBASE_PROJECT_ID: ci-project
       FIREBASE_ADMIN_EMAIL: ci@example.invalid

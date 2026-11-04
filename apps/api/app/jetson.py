@@ -11,6 +11,7 @@ from typing import AsyncIterator
 
 import asyncssh
 
+from .cameras import CameraTarget, list_camera_targets
 from .config import Settings
 from .models import CameraHealth, DirectoryListing, FileContent, FileEntry, JetsonHealth, SystemHealth
 
@@ -29,9 +30,16 @@ MAX_FILE_SIZE = 1_000_000
 
 HEALTH_SCRIPT = r'''
 import json, re, shutil, subprocess, sys
-camera_ip = json.loads(sys.stdin.buffer.read())["camera_ip"]
-ping = subprocess.run(["ping", "-c", "1", "-W", "2", camera_ip], capture_output=True, text=True)
-latency_match = re.search(r"time[=<]([0-9.]+)\s*ms", ping.stdout)
+config = json.loads(sys.stdin.buffer.read())
+cameras = []
+for camera in config["cameras"]:
+    ping = subprocess.run(["ping", "-c", "1", "-W", "2", camera["ip"]], capture_output=True, text=True)
+    latency_match = re.search(r"time[=<]([0-9.]+)\s*ms", ping.stdout)
+    cameras.append({
+        "id": camera["id"],
+        "online": ping.returncode == 0,
+        "latency_ms": float(latency_match.group(1)) if latency_match else None,
+    })
 try:
     tegra = subprocess.run(["timeout", "2", "tegrastats", "--interval", "500"], capture_output=True, text=True, timeout=3).stdout.splitlines()[0]
 except Exception:
@@ -43,8 +51,7 @@ disk = shutil.disk_usage("/")
 with open("/proc/uptime", encoding="ascii") as handle:
     uptime = int(float(handle.read().split()[0]))
 print(json.dumps({
-    "camera_online": ping.returncode == 0,
-    "camera_latency_ms": float(latency_match.group(1)) if latency_match else None,
+    "cameras": cameras,
     "gpu_percent": int(gpu.group(1)) if gpu else 0,
     "temperature_c": float(temp.group(1)) if temp else 0.0,
     "memory_used_mb": int(ram.group(1)) if ram else 0,
@@ -58,20 +65,22 @@ LIVE_STREAM_SCRIPT = r'''
 import ast, ipaddress, json, sys, time
 import cv2
 config = json.loads(sys.stdin.buffer.read())
-with open(config["config_path"], encoding="utf-8") as source_file:
-    tree = ast.parse(source_file.read())
-values = {}
-for node in tree.body:
-    if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-        name = node.targets[0].id
-        if name in {"USERNAME", "CAMERA_PASSWORD"}:
-            try:
-                value = ast.literal_eval(node.value)
-                if isinstance(value, str): values[name] = value
-            except (ValueError, TypeError):
-                pass
-# The camera address comes from the server's trusted deployment settings;
-# Mobil_Pos.py only supplies the private credentials.
+values = {"USERNAME": config.get("username"), "CAMERA_PASSWORD": config.get("password")}
+if not all(values.values()):
+    with open(config["config_path"], encoding="utf-8") as source_file:
+        tree = ast.parse(source_file.read())
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            name = node.targets[0].id
+            if name in {"USERNAME", "CAMERA_PASSWORD"}:
+                try:
+                    value = ast.literal_eval(node.value)
+                    if isinstance(value, str): values[name] = value
+                except (ValueError, TypeError):
+                    pass
+if not all(values.values()):
+    raise SystemExit(5)
+# The camera address comes from trusted deployment settings; credentials stay server-side.
 camera_ip = str(ipaddress.IPv4Address(config["expected_ip"]))
 from urllib.parse import quote
 channel = str(config["channel"])
@@ -121,21 +130,27 @@ import ast, ipaddress, json, os, sys, tempfile
 import requests
 from requests.auth import HTTPDigestAuth
 config = json.loads(sys.stdin.buffer.read())
-with open(config["config_path"], encoding="utf-8") as source_file:
-    tree = ast.parse(source_file.read())
-values = {}
-for node in tree.body:
-    if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-        name = node.targets[0].id
-        if name in {"USERNAME", "CAMERA_PASSWORD"}:
-            try:
-                value = ast.literal_eval(node.value)
-                if isinstance(value, str): values[name] = value
-            except (ValueError, TypeError):
-                pass
-# Use the configured camera IP instead of a possibly stale IP in Mobil_Pos.py.
+values = {"USERNAME": config.get("username"), "CAMERA_PASSWORD": config.get("password")}
+if not all(values.values()):
+    with open(config["config_path"], encoding="utf-8") as source_file:
+        tree = ast.parse(source_file.read())
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
+            name = node.targets[0].id
+            if name in {"USERNAME", "CAMERA_PASSWORD"}:
+                try:
+                    value = ast.literal_eval(node.value)
+                    if isinstance(value, str): values[name] = value
+                except (ValueError, TypeError):
+                    pass
+if not all(values.values()):
+    raise SystemExit(5)
+# Use the configured camera IP instead of any address embedded in a host script.
 camera_ip = str(ipaddress.IPv4Address(config["expected_ip"]))
-url = f"http://{camera_ip}/ISAPI/Streaming/channels/101/picture"
+channel = str(config["channel"])
+if channel not in {"101", "102"}:
+    raise SystemExit(6)
+url = f"http://{camera_ip}/ISAPI/Streaming/channels/{channel}/picture"
 response = requests.get(
     url,
     auth=HTTPDigestAuth(values["USERNAME"], values["CAMERA_PASSWORD"]),
@@ -315,25 +330,34 @@ async def read_text_file(settings: Settings, requested_path: str) -> FileContent
 
 
 async def get_system_health(settings: Settings) -> SystemHealth:
-    payload = json.dumps({"camera_ip": settings.camera_ip}).encode()
+    targets = list_camera_targets(settings)
+    payload = json.dumps({"cameras": [{"id": target.id, "ip": target.ip} for target in targets]}).encode()
     async with connect(settings) as connection:
         result = await connection.run(
             encoded_python_command(HEALTH_SCRIPT),
             input=payload,
             encoding=None,
             check=True,
-            timeout=10,
+            timeout=15,
         )
 
     values = json.loads(result.stdout.decode("utf-8"))
-    camera_online = bool(values["camera_online"])
+    health_by_id = {camera["id"]: camera for camera in values["cameras"]}
+    cameras = [
+        CameraHealth(
+            id=target.id,
+            label=target.label,
+            ip=target.ip,
+            status="online" if health_by_id[target.id]["online"] else "offline",
+            latency_ms=health_by_id[target.id]["latency_ms"],
+            detection_enabled=target.detection_enabled,
+        )
+        for target in targets
+    ]
     temperature = float(values["temperature_c"])
     return SystemHealth(
-        camera=CameraHealth(
-            ip=settings.camera_ip,
-            status="online" if camera_online else "offline",
-            latency_ms=values["camera_latency_ms"],
-        ),
+        camera=cameras[0],
+        cameras=cameras,
         jetson=JetsonHealth(
             status="healthy" if temperature < 75 else "warning",
             gpu_percent=int(values["gpu_percent"]),
@@ -347,15 +371,24 @@ async def get_system_health(settings: Settings) -> SystemHealth:
     )
 
 
-async def stream_camera_mjpeg(settings: Settings) -> AsyncIterator[bytes]:
-    config_path = str(PurePosixPath(settings.jetson_workspace) / settings.camera_config_file)
-    stream_config = json.dumps(
-        {
-            "config_path": config_path,
-            "expected_ip": settings.camera_ip,
-            "channel": settings.camera_live_channel,
-        }
-    ).encode()
+def _camera_process_config(settings: Settings, target: CameraTarget) -> dict[str, str | int]:
+    config: dict[str, str | int] = {
+        "expected_ip": target.ip,
+        "channel": settings.camera_live_channel,
+        "frame_path": target.frame_cache,
+    }
+    if target.config_file:
+        config["config_path"] = str(PurePosixPath(settings.jetson_workspace) / target.config_file)
+    username = target.username.get_secret_value() if target.username else ""
+    password = target.password.get_secret_value() if target.password else ""
+    if username and password:
+        config["username"] = username
+        config["password"] = password
+    return config
+
+
+async def stream_camera_mjpeg(settings: Settings, target: CameraTarget) -> AsyncIterator[bytes]:
+    stream_config = json.dumps(_camera_process_config(settings, target)).encode()
     async with connect(settings) as connection:
         process = await connection.create_process(
             encoded_python_command(LIVE_STREAM_SCRIPT),
@@ -377,15 +410,8 @@ async def stream_camera_mjpeg(settings: Settings) -> AsyncIterator[bytes]:
                 process.kill()
 
 
-async def refresh_camera_frame(settings: Settings) -> bytes:
-    config_path = str(PurePosixPath(settings.jetson_workspace) / settings.camera_config_file)
-    frame_config = json.dumps(
-        {
-            "config_path": config_path,
-            "expected_ip": settings.camera_ip,
-            "frame_path": settings.camera_frame_cache,
-        }
-    ).encode()
+async def refresh_camera_frame(settings: Settings, target: CameraTarget) -> bytes:
+    frame_config = json.dumps(_camera_process_config(settings, target)).encode()
     async with connect(settings) as connection:
         result = await connection.run(
             encoded_python_command(FRAME_SCRIPT),
@@ -398,7 +424,7 @@ async def refresh_camera_frame(settings: Settings) -> bytes:
         if result.exit_status != 0:
             raise RuntimeError("Frame kamera tidak tersedia")
         async with connection.start_sftp_client() as sftp:
-            async with sftp.open(settings.camera_frame_cache, "rb") as frame_file:
+            async with sftp.open(target.frame_cache, "rb") as frame_file:
                 frame = await frame_file.read(5_000_001)
 
     if len(frame) > 5_000_000 or not frame.startswith(b"\xff\xd8"):
@@ -406,11 +432,11 @@ async def refresh_camera_frame(settings: Settings) -> bytes:
     return frame
 
 
-async def get_cached_camera_frame(settings: Settings) -> tuple[bytes, float]:
+async def get_cached_camera_frame(settings: Settings, target: CameraTarget) -> tuple[bytes, float]:
     async with connect(settings) as connection:
         async with connection.start_sftp_client() as sftp:
-            attrs = await sftp.stat(settings.camera_frame_cache)
-            async with sftp.open(settings.camera_frame_cache, "rb") as frame_file:
+            attrs = await sftp.stat(target.frame_cache)
+            async with sftp.open(target.frame_cache, "rb") as frame_file:
                 frame = await frame_file.read(5_000_001)
 
     if len(frame) > 5_000_000 or not frame.startswith(b"\xff\xd8"):

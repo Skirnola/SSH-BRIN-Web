@@ -190,6 +190,14 @@ Before deploying this release:
    ```dotenv
    CAMERA_IP=10.21.1.92
    CAMERA_FRAME_CACHE=/home/jetson/.cache/brin-edge/camera-frame-10.21.1.92.jpg
+   CAMERA_2_IP=10.21.1.93
+   CAMERA_2_USERNAME=<private-camera-2-user>
+   CAMERA_2_PASSWORD=<private-camera-2-password>
+   CAMERA_2_FRAME_CACHE=/home/jetson/.cache/brin-edge/camera-frame-10.21.1.93.jpg
+   CAMERA_3_IP=10.21.1.94
+   CAMERA_3_USERNAME=<private-camera-3-user>
+   CAMERA_3_PASSWORD=<private-camera-3-password>
+   CAMERA_3_FRAME_CACHE=/home/jetson/.cache/brin-edge/camera-frame-10.21.1.94.jpg
    CAMERA_LIVE_CHANNEL=101
    ```
 
@@ -202,11 +210,11 @@ Before deploying this release:
    test -x /home/jetson/yolo-env/bin/python && echo PYTHON_OK
    ```
 
-   Detection runs the host's copy of this script, not a copy bundled in the web image. Confirm its camera target and model paths are correct separately: the dashboard's `CAMERA_IP` controls snapshots and Real-Time Cam, not camera addresses embedded in the detection script. Running detection may write to Firebase; test it intentionally.
+   Detection runs the host's copy of this script, not a copy bundled in the web image. It remains restricted to Kamera 1; Kamera 2 and 3 provide snapshot/live viewing only. Confirm the host script's Kamera 1 target and model paths separately: dashboard camera settings do not rewrite addresses embedded in the detection script. Running detection may write to Firebase; test it intentionally.
 
 3. Push or merge the release into `main`. A push to `development` runs quality checks only; it does not update the live website. A push to `main` publishes images and deploys only when `ENABLE_JETSON_DEPLOY=true`, a matching runner is online, and any `jetson-production` environment approval is granted. Otherwise use the manual workflow dispatch described above.
 
-4. After deployment, confirm all three panels appear together, with no sidebar, and check camera snapshots, Real-Time Cam, device metrics, logout, and the updated tutorial. Intentionally start one detection session, then stop or close it and verify the host process exits. Do not treat the basic HTTP health check as proof that camera or detection hardware works.
+4. After deployment, confirm all three panels appear together, with no sidebar. Switch through Cameras 1, 2, and 3 in snapshot and Real-Time Cam modes; verify that only Kamera 1 is marked for detection. Check device metrics, logout, and the updated tutorial. Intentionally start one detection session, then stop or close it and verify the host process exits. Do not treat the basic HTTP health check as proof that camera or detection hardware works.
 
 ## 7. Normal release workflow
 
@@ -260,7 +268,7 @@ curl -fsS http://127.0.0.1:3000/api/v1/health
 
 A successful image build is not a successful release. Expand **Scan published ARM64 image → Run Trivy** and read the vulnerability table below the report summary. OS packages can show zero vulnerabilities while an application dependency still fails the gate.
 
-The `935340e` dashboard release was blocked by Next.js `16.3.3` (`GHSA-vcvr-r3jv-pc5j`, fixed in `16.3.6`) and sharp `0.35.4` (`GHSA-wq5f-xc86-pv6w`, fixed in `0.35.5`). The dependency update uses Next.js/eslint-config-next `16.3.8` and locks sharp to `0.35.5`. Keep both `apps/web/package.json` and `apps/web/package-lock.json` in the release commit.
+The `935340e` dashboard release was blocked by Next.js `16.3.3` (`GHSA-vcvr-r3jv-pc5j`, fixed in `16.3.6`) and sharp `0.35.4` (`GHSA-wq5f-xc86-pv6w`, fixed in `0.35.5`). A later audit required another Next.js update; the current dependency set uses Next.js/eslint-config-next `16.4.5`, sharp `0.35.5`, and msgpack `1.2.3`. Keep `apps/web/package.json`, `apps/web/package-lock.json`, and `apps/api/requirements.txt` in the release commit.
 
 CI now checks production npm dependencies before building, and Buildx pulls current base images. Trivy remains the final ARM64 runtime-image gate; do not bypass it with `exit-code: 0` or `continue-on-error`. Push the patched commit to build a new image, rather than rerunning the old vulnerable commit.
 
@@ -276,7 +284,7 @@ npm test
 npm run build
 ```
 
-A full `npm audit` also covers development tooling. At the time of this patch it still reports an unpatched `braces` advisory through eslint-config-next's fast-glob/micromatch dependency chain. These are development dependencies, not packages in the standalone runtime image. Track the upstream fix; do not use `npm audit fix --force`, which currently proposes downgrading the lint configuration to Next.js 14.
+A full `npm audit` also covers development tooling. After applying the normal non-breaking audit fixes, it still reports moderate `minimatch` findings through the ESLint/type-analysis dependency chain. These are development dependencies, not packages in the standalone runtime image. Track the upstream fix; do not use `npm audit fix --force`, which currently proposes an incompatible ESLint downgrade.
 
 ## 10. Pause automatic deployment
 

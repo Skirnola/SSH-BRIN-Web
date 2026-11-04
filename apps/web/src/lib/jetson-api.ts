@@ -20,13 +20,18 @@ export type RemoteFileContent = {
   content: string;
 };
 
+export type CameraHealth = {
+  id: "camera-1" | "camera-2" | "camera-3";
+  label: string;
+  ip: string;
+  status: "online" | "offline";
+  latency_ms: number | null;
+  detection_enabled: boolean;
+};
+
 export type SystemHealth = {
-  camera: {
-    id: string;
-    ip: string;
-    status: "online" | "offline";
-    latency_ms: number | null;
-  };
+  camera: CameraHealth;
+  cameras: CameraHealth[];
   jetson: {
     id: string;
     status: "healthy" | "warning";
@@ -68,12 +73,12 @@ export async function getSystemHealth(): Promise<SystemHealth> {
   return response.json() as Promise<SystemHealth>;
 }
 
-export function getCameraFrameUrl(version: number): string {
-  return `${API_URL}/api/v1/cameras/main/frame?v=${version}`;
+export function getCameraFrameUrl(cameraId: CameraHealth["id"], version: number): string {
+  return `${API_URL}/api/v1/cameras/${cameraId}/frame?v=${version}`;
 }
 
-export function getCameraLiveUrl(session: number): string {
-  return `${API_URL}/api/v1/cameras/main/live?session=${session}`;
+export function getCameraLiveUrl(cameraId: CameraHealth["id"], session: number): string {
+  return `${API_URL}/api/v1/cameras/${cameraId}/live?session=${session}`;
 }
 
 export async function getDetectionScripts(): Promise<string[]> {

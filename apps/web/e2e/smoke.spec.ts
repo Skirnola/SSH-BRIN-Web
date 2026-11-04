@@ -19,20 +19,32 @@ async function signIn(page: Page, dismissTour = true) {
 async function mockDashboard(page: Page) {
   const preview = await readFile(new URL("../public/Camera1.jpg", import.meta.url));
   const requestedScripts: string[] = [];
+  const requestedCameras: string[] = [];
   await page.route("**/api/v1/auth/session", (route) => route.fulfill({ json: { username: "admin" } }));
   await page.route("**/api/v1/system/health", (route) => route.fulfill({ json: {
-    camera: { id: "CAM-01", ip: "10.21.1.92", status: "online", latency_ms: 9 },
+    camera: { id: "camera-1", label: "Kamera 1", ip: "10.21.1.92", status: "online", latency_ms: 9, detection_enabled: true },
+    cameras: [
+      { id: "camera-1", label: "Kamera 1", ip: "10.21.1.92", status: "online", latency_ms: 9, detection_enabled: true },
+      { id: "camera-2", label: "Kamera 2", ip: "10.21.1.93", status: "online", latency_ms: 11, detection_enabled: false },
+      { id: "camera-3", label: "Kamera 3", ip: "10.21.1.94", status: "online", latency_ms: 13, detection_enabled: false },
+    ],
     jetson: { id: "tegra-ubuntu", status: "healthy", gpu_percent: 22, temperature_c: 47, memory_used_mb: 2000, memory_total_mb: 8000, storage_percent: 30, uptime_seconds: 86400 },
     updated_at: new Date().toISOString(),
   } }));
-  await page.route("**/api/v1/cameras/main/frame?**", (route) => route.fulfill({ status: 200, contentType: "image/jpeg", body: preview }));
-  await page.route("**/api/v1/cameras/main/live?**", (route) => route.fulfill({ status: 200, contentType: "image/jpeg", body: preview }));
+  await page.route("**/api/v1/cameras/*/frame?**", (route) => {
+    requestedCameras.push(new URL(route.request().url()).pathname.split("/").at(-2) ?? "");
+    return route.fulfill({ status: 200, contentType: "image/jpeg", body: preview });
+  });
+  await page.route("**/api/v1/cameras/*/live?**", (route) => {
+    requestedCameras.push(new URL(route.request().url()).pathname.split("/").at(-2) ?? "");
+    return route.fulfill({ status: 200, contentType: "image/jpeg", body: preview });
+  });
   await page.route("**/api/v1/detection/live?**", (route) => {
     requestedScripts.push(new URL(route.request().url()).searchParams.get("script") ?? "");
     return route.fulfill({ status: 200, contentType: "image/jpeg", body: preview });
   });
   await page.addInitScript(() => localStorage.setItem("brin-workspace-tour-v3", "complete"));
-  return requestedScripts;
+  return { requestedScripts, requestedCameras };
 }
 
 async function expectSingleDashboard(page: Page) {
@@ -60,6 +72,10 @@ async function expectSingleDashboard(page: Page) {
   const brandBounds = await page.locator(".topbar-brand").boundingBox();
   expect(brandBounds?.x).toBe(0);
   await expect(page.getByText(detectionScript)).toHaveCount(0);
+  for (const camera of ["Kamera 1", "Kamera 2", "Kamera 3"]) {
+    await expect(page.getByRole("button", { name: camera, exact: true })).toBeVisible();
+  }
+  await expect(page.getByText("deteksi hanya Kamera 1", { exact: false })).toBeVisible();
 }
 
 async function expectCameraFrame(page: Page, timeout = 5_000) {
@@ -73,11 +89,11 @@ async function expectCameraFrame(page: Page, timeout = 5_000) {
 // Production authentication and hardware access are never bypassed.
 test("menggabungkan tiga panel tanpa sidebar dan menjalankan deteksi yang ditetapkan", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
-  const requestedScripts = await mockDashboard(page);
+  const { requestedScripts, requestedCameras } = await mockDashboard(page);
   await page.goto("/");
   await expectSingleDashboard(page);
   await expectCameraFrame(page);
-  await expect(page.getByText("Kamera dan Jetson terhubung", { exact: true })).toBeVisible();
+  await expect(page.getByText("3 kamera dan Jetson terhubung", { exact: true })).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("dashboard-desktop.png"), fullPage: true, animations: "disabled" });
   const logout = page.getByRole("button", { name: "Keluar" });
   await logout.hover();
@@ -101,10 +117,16 @@ test("menggabungkan tiga panel tanpa sidebar dan menjalankan deteksi yang diteta
   await page.keyboard.press("Escape");
   await expect(detectionViewer).toBeHidden();
 
-  await page.getByRole("button", { name: "Buka Real-Time Cam" }).click();
+  await page.getByRole("button", { name: "Kamera 2", exact: true }).click();
+  await expect(page.getByRole("img", { name: "Frame terbaru Kamera 2" })).toBeVisible();
+  await expect(page.getByText("10.21.1.93", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Buka Real-Time Cam · Kamera 2" }).click();
   const cameraViewer = page.getByRole("dialog", { name: "Area parkir BRIN" });
   await expect(cameraViewer.getByRole("button", { name: "Real-Time Cam" })).toHaveAttribute("aria-pressed", "true");
-  await expect(cameraViewer.getByRole("img", { name: "Real-Time Cam Kamera 1" })).toBeVisible();
+  await expect(cameraViewer.getByRole("img", { name: "Real-Time Cam Kamera 2" })).toBeVisible();
+  await cameraViewer.getByRole("button", { name: "Tampilkan Kamera 3" }).click();
+  await expect(cameraViewer.getByRole("img", { name: "Real-Time Cam Kamera 3" })).toBeVisible();
+  await expect.poll(() => requestedCameras).toContain("camera-3");
   await expect(cameraViewer.getByRole("button", { name: "Deteksi", exact: true })).toHaveCount(0);
   await cameraViewer.getByRole("button", { name: "Gambar" }).click();
   await page.keyboard.press("Escape");
@@ -134,6 +156,11 @@ test("menumpuk semua panel di seluler tanpa navigasi dan memandu tiap panel", as
   await page.setViewportSize({ width: 320, height: 740 });
   await expectSingleDashboard(page);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole("button", { name: "Buka Real-Time Cam · Kamera 1" }).click();
+  const mobileViewer = page.getByRole("dialog", { name: "Area parkir BRIN" });
+  await expect(mobileViewer.getByRole("button", { name: "Tampilkan Kamera 3" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.keyboard.press("Escape");
 });
 
 test("dashboard solid tetap berfungsi dengan reduced motion", async ({ page }) => {
@@ -151,7 +178,7 @@ test("dashboard solid tetap berfungsi dengan reduced motion", async ({ page }) =
 test("menampilkan kegagalan perangkat tanpa menghilangkan panel", async ({ page }) => {
   await mockDashboard(page);
   await page.route("**/api/v1/system/health", (route) => route.fulfill({ status: 503, json: { detail: "Kondisi perangkat tidak dapat dibaca" } }));
-  await page.route("**/api/v1/cameras/main/frame?**", (route) => route.fulfill({ status: 503 }));
+  await page.route("**/api/v1/cameras/camera-1/frame?**", (route) => route.fulfill({ status: 503 }));
   await page.goto("/");
   await expectSingleDashboard(page);
   await expect(page.getByText("Frame langsung belum tersedia", { exact: true })).toBeVisible();
@@ -183,10 +210,10 @@ test("menampilkan petunjuk tiga langkah hanya pada kunjungan pertama", async ({ 
 test("menampilkan kondisi dan frame kamera nyata pada satu halaman", async ({ page }) => {
   test.skip(!e2ePassword, "BRIN_E2E_PASSWORD diperlukan untuk pengujian workspace");
   await signIn(page);
-  await expect(page.getByText("Kamera dan Jetson terhubung", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("3 kamera dan Jetson terhubung", { exact: true })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("10.21.1.92").first()).toBeVisible();
   await expectCameraFrame(page, 30_000);
-  await page.getByRole("button", { name: "Perbesar tampilan kamera" }).click();
+  await page.getByRole("button", { name: "Perbesar tampilan Kamera 1" }).click();
   const viewer = page.getByRole("dialog", { name: "Area parkir BRIN" });
   await expect(viewer).toBeVisible();
   await expect(viewer.getByRole("button", { name: "Gambar" })).toHaveAttribute("aria-pressed", "true");

@@ -21,9 +21,9 @@
 
 Satu dashboard tanpa sidebar: panel **Jalankan deteksi**, **Kamera**, dan **Kondisi perangkat** tampil bersama. Header menampilkan logo dan judul BRIN dalam blok biru di kiri; UI tidak menampilkan kode atau penjelajah berkas.
 
-- **Jalankan deteksi** — satu tombol untuk menjalankan hanya `Test19Agus_optimized_fps_big_ui.py` di Jetson dan menampilkan hasilnya; tidak ada penjelajah berkas di UI.
-- **Kamera** — gambar berkala serta Real-Time Cam MJPEG channel HD dalam tampilan penuh.
-- **Kondisi perangkat nyata** — menampilkan GPU, suhu, memori, penyimpanan, uptime, status kamera, dan latensi.
+- **Jalankan deteksi** — satu tombol untuk menjalankan hanya `Test19Agus_optimized_fps_big_ui.py` pada Kamera 1 dan menampilkan hasilnya; tidak ada penjelajah berkas di UI.
+- **Kamera** — pemilih Kamera 1, 2, dan 3 untuk gambar berkala serta Real-Time Cam MJPEG channel `101` HD dalam tampilan penuh.
+- **Kondisi perangkat nyata** — menampilkan GPU, suhu, memori, penyimpanan, uptime, status ketiga kamera, dan latensi.
 - **Firebase Authentication** — sesi HttpOnly yang dapat diperbarui dan tetap aktif setelah browser ditutup.
 - **Petunjuk pengguna baru** — tur tiga langkah yang tersimpan secara lokal pada setiap browser.
 
@@ -144,11 +144,13 @@ Untuk memeriksa tata letak tanpa kredensial login, jalankan `npm run test:e2e` t
 | `FIREBASE_PROJECT_ID` | Firebase project ID |
 | `FIREBASE_ADMIN_EMAIL` | Email Firebase yang dipetakan ke username operator |
 | `AUTH_COOKIE_SECURE` | Wajib `true` saat menggunakan HTTPS produksi |
-| `CAMERA_IP` | Alamat kamera yang digunakan backend untuk ping, snapshot, dan live stream; sekarang `10.21.1.92` |
-| `CAMERA_MAX_LIVE_VIEWERS` | Batas stream MJPEG bersamaan; default `4` |
+| `CAMERA_IP` | Alamat Kamera 1 (`10.21.1.92`); kredensial tetap dibaca dari konfigurasi host yang diizinkan |
+| `CAMERA_2_IP`, `CAMERA_3_IP` | Alamat Kamera 2 dan 3 (`10.21.1.93`, `10.21.1.94`) |
+| `CAMERA_2_USERNAME/PASSWORD`, `CAMERA_3_USERNAME/PASSWORD` | Kredensial privat kamera tambahan; hanya disimpan di `.env` lokal atau `deploy/jetson.env`, tidak pernah di frontend/Git |
+| `CAMERA_MAX_LIVE_VIEWERS` | Batas total stream MJPEG bersamaan untuk semua kamera; default `4` |
 | `NEXT_PUBLIC_API_URL` | URL FastAPI yang diakses browser |
 
-Lihat `.env.example` pada masing-masing aplikasi untuk daftar lengkap. Saat deploy, ubah `CAMERA_IP` pada `deploy/jetson.env` privat dan gunakan cache frame baru sebelum membangun ulang layanan API. Backend menggunakan IP ini untuk kamera tanpa mengirim kredensial ke browser. Jika script deteksi membaca IP dari konfigurasi di host Jetson, sesuaikan juga IP-nya di host secara terpisah; konfigurasi lokal tidak mengubah file Jetson.
+Lihat `.env.example` pada masing-masing aplikasi untuk daftar lengkap. Saat deploy, simpan seluruh alamat, cache frame, username, dan password kamera tambahan hanya pada `deploy/jetson.env` privat sebelum membangun ulang layanan API. Backend mengakses kamera tanpa mengirim kredensial atau URL RTSP ke browser. Deteksi tetap khusus Kamera 1; jika script deteksi membaca IP dari file host Jetson, sesuaikan IP tersebut secara terpisah karena konfigurasi website tidak mengubah script deteksi.
 
 ## Pengujian
 
