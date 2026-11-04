@@ -270,7 +270,7 @@ A successful image build is not a successful release. Expand **Scan published AR
 
 The `935340e` dashboard release was blocked by Next.js `16.3.3` (`GHSA-vcvr-r3jv-pc5j`, fixed in `16.3.6`) and sharp `0.35.4` (`GHSA-wq5f-xc86-pv6w`, fixed in `0.35.5`). A later audit required another Next.js update; the current dependency set uses Next.js/eslint-config-next `16.4.5`, sharp `0.35.5`, and msgpack `1.2.3`. Keep `apps/web/package.json`, `apps/web/package-lock.json`, and `apps/api/requirements.txt` in the release commit.
 
-CI now checks production npm dependencies before building, and Buildx pulls current base images. Trivy remains the final ARM64 runtime-image gate; do not bypass it with `exit-code: 0` or `continue-on-error`. The workflow installs a pinned Trivy CLI with `setup-trivy` and runs the scan explicitly, avoiding composite-action setup failures while retaining the HIGH/CRITICAL gate. Push the patched commit to build a new image, rather than rerunning an old vulnerable commit.
+CI now checks production npm dependencies before building, and Buildx pulls current base images. Trivy remains the final ARM64 runtime-image gate; do not bypass it with `exit-code: 0` or `continue-on-error`. The workflow runs the official Trivy container pinned by multi-platform digest, avoiding runner-side installer failures while retaining the HIGH/CRITICAL gate. Push the patched commit to build a new image, rather than rerunning an old vulnerable commit.
 
 For a local check:
 

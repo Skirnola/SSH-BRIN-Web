@@ -165,22 +165,23 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.service }}-arm64
           provenance: mode=max
           sbom: true
-      - name: Install Trivy
-        uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567 # v0.3.1
-        with:
-          version: v0.76.1
-          cache: true
       - name: Scan published ARM64 image
-        run: >-
-          trivy image
-          --platform linux/arm64
-          --scanners vuln,secret
-          --skip-version-check
-          --format table
-          --severity HIGH,CRITICAL
-          --ignore-unfixed
-          --exit-code 1
-          "${{ matrix.image }}:${{ github.sha }}"
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --volume /var/run/docker.sock:/var/run/docker.sock \
+            --volume "${HOME}/.docker:/root/.docker:ro" \
+            aquasec/trivy@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c \
+            image \
+            --platform linux/arm64 \
+            --scanners vuln,secret \
+            --skip-version-check \
+            --format table \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 1 \
+            "${{ matrix.image }}:${{ github.sha }}"
 
   deploy-jetson:
     name: Deploy to Jetson
