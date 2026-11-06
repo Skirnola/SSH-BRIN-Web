@@ -60,7 +60,7 @@ def test_additional_camera_snapshot_uses_backend_credentials(tmp_path, monkeypat
     assert request.call_args.kwargs["auth"].password == "camera-password"
 
 
-def test_camera_targets_are_allowlisted_and_detection_stays_on_camera_one():
+def test_camera_targets_are_allowlisted_and_detection_enabled_on_first_two():
     settings = SimpleNamespace(
         camera_ip="10.21.1.92",
         camera_config_file="Mobil_Pos.py",
@@ -77,7 +77,7 @@ def test_camera_targets_are_allowlisted_and_detection_stays_on_camera_one():
 
     targets = list_camera_targets(settings)
     assert [target.id for target in targets] == ["camera-1", "camera-2", "camera-3"]
-    assert [target.detection_enabled for target in targets] == [True, False, False]
+    assert [target.detection_enabled for target in targets] == [True, True, False]
     assert get_camera_target(settings, "main").id == "camera-1"
     assert get_camera_target(settings, "camera-2").password.get_secret_value() == "password-2"
     with pytest.raises(ValueError):

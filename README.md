@@ -21,7 +21,7 @@
 
 Satu dashboard tanpa sidebar: panel **Jalankan deteksi**, **Kamera**, dan **Kondisi perangkat** tampil bersama. Header menampilkan logo dan judul BRIN dalam blok biru di kiri; UI tidak menampilkan kode atau penjelajah berkas.
 
-- **Jalankan deteksi** — satu tombol untuk menjalankan hanya `Test19Agus_optimized_fps_big_ui.py` pada Kamera 1 dan menampilkan hasilnya; tidak ada penjelajah berkas di UI.
+- **Jalankan deteksi** — pilih Kamera 1 atau Kamera 2 untuk menjalankan detektor host yang diizinkan. Kamera 1 memakai `Test19Agus_optimized_fps_big_ui.py`, Kamera 2 memakai `test.py` dengan argumen tetap `2`. Hanya satu proses deteksi berjalan pada satu waktu; nama file dan argumen tidak ditampilkan di UI.
 - **Kamera** — pemilih Kamera 1, 2, dan 3 untuk gambar berkala serta Real-Time Cam MJPEG channel `101` HD dalam tampilan penuh.
 - **Kondisi perangkat nyata** — menampilkan GPU, suhu, memori, penyimpanan, uptime, status ketiga kamera, dan latensi.
 - **Firebase Authentication** — sesi HttpOnly yang dapat diperbarui dan tetap aktif setelah browser ditutup.
@@ -150,7 +150,7 @@ Untuk memeriksa tata letak tanpa kredensial login, jalankan `npm run test:e2e` t
 | `CAMERA_MAX_LIVE_VIEWERS` | Batas total stream MJPEG bersamaan untuk semua kamera; default `4` |
 | `NEXT_PUBLIC_API_URL` | URL FastAPI yang diakses browser |
 
-Lihat `.env.example` pada masing-masing aplikasi untuk daftar lengkap. Saat deploy, simpan seluruh alamat, cache frame, username, dan password kamera tambahan hanya pada `deploy/jetson.env` privat sebelum membangun ulang layanan API. Backend mengakses kamera tanpa mengirim kredensial atau URL RTSP ke browser. Deteksi tetap khusus Kamera 1; jika script deteksi membaca IP dari file host Jetson, sesuaikan IP tersebut secara terpisah karena konfigurasi website tidak mengubah script deteksi.
+Lihat `.env.example` pada masing-masing aplikasi untuk daftar lengkap. Saat deploy, simpan seluruh alamat, cache frame, username, dan password kamera tambahan hanya pada `deploy/jetson.env` privat sebelum membangun ulang layanan API. Backend mengakses kamera tanpa mengirim kredensial atau URL RTSP ke browser. Deteksi tersedia untuk Kamera 1 dan 2; Kamera 3 hanya untuk pemantauan. Pemilih kamera deteksi terpisah dari pemilih feed kamera. Konfigurasi website tidak mengubah script deteksi host. Detektor Kamera 2 memakai mask `/home/jetson/BRIN RI NDIP/A_Mobil_Positions/mobil_positions_cam_2.pkl` dan Firebase `slot_parking_cam2` / `slot_history_cam2`. `Mobil_Pos_cam2.py` dan `mobil_positioning_2point_line_2.py` adalah editor mask, bukan detektor; keduanya tidak boleh dijalankan lewat endpoint deteksi.
 
 ## Pengujian
 

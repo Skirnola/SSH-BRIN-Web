@@ -40,6 +40,7 @@ def list_camera_targets(settings: Settings) -> tuple[CameraTarget, ...]:
             frame_cache=settings.camera_2_frame_cache,
             username=settings.camera_2_username,
             password=settings.camera_2_password,
+            detection_enabled=True,
         ),
         CameraTarget(
             id="camera-3",

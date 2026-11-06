@@ -3,15 +3,18 @@
 import { useQuery } from "@tanstack/react-query";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { type CameraHealth, getCameraFrameUrl, getCameraLiveUrl, getDetectionLiveUrl, getSystemHealth } from "@/lib/jetson-api";
+import { type CameraHealth, type DetectionCameraId, getCameraFrameUrl, getCameraLiveUrl, getDetectionLiveUrl, getSystemHealth } from "@/lib/jetson-api";
 import { useWorkspaceAuth } from "./auth-gate";
 import { Icon } from "./icon";
 import { WorkspaceTour } from "./workspace-tour";
 
-const DETECTION_SCRIPT = "Test19Agus_optimized_fps_big_ui.py";
+const DETECTION_CAMERAS: { id: DetectionCameraId; label: string }[] = [
+  { id: "camera-1", label: "Kamera 1" },
+  { id: "camera-2", label: "Kamera 2" },
+];
 const FALLBACK_CAMERAS: CameraHealth[] = [
   { id: "camera-1", label: "Kamera 1", ip: "10.21.1.92", status: "offline", latency_ms: null, detection_enabled: true },
-  { id: "camera-2", label: "Kamera 2", ip: "10.21.1.93", status: "offline", latency_ms: null, detection_enabled: false },
+  { id: "camera-2", label: "Kamera 2", ip: "10.21.1.93", status: "offline", latency_ms: null, detection_enabled: true },
   { id: "camera-3", label: "Kamera 3", ip: "10.21.1.94", status: "offline", latency_ms: null, detection_enabled: false },
 ];
 function StatusDot() {
@@ -28,6 +31,7 @@ export function EdgeWorkspace() {
   const [frameFailed, setFrameFailed] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
   const [detectionViewerOpen, setDetectionViewerOpen] = useState(false);
+  const [detectionCameraId, setDetectionCameraId] = useState<DetectionCameraId>("camera-1");
   const [viewerMode, setViewerMode] = useState<"image" | "live">("image");
   const [liveSession, setLiveSession] = useState(0);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -127,6 +131,7 @@ export function EdgeWorkspace() {
     setDetectionViewerOpen(false);
   };
 
+  const detectionCameraLabel = DETECTION_CAMERAS.find((camera) => camera.id === detectionCameraId)!.label;
   const health = systemHealth.data;
   const cameras = health?.cameras?.length ? health.cameras : FALLBACK_CAMERAS;
   const selectedCamera = cameras.find((camera) => camera.id === selectedCameraId) ?? cameras[0];
@@ -172,9 +177,12 @@ export function EdgeWorkspace() {
             <section id="tour-detection" className="panel detection-panel" aria-labelledby="detection-title">
               <div className="detection-intro">
                 <Image className="detection-photo" src="/vehicle-detection.svg" width={80} height={80} alt="Ilustrasi deteksi kendaraan di area parkir" loading="eager" unoptimized />
-                <div><p className="panel-kicker">Analisis kendaraan · Kamera 01</p><h2 id="detection-title">Jalankan deteksi</h2><p>Video yang sudah dianalisis akan tampil langsung di layar. Tutup tampilan untuk menghentikan proses.</p></div>
+                <div><p className="panel-kicker">Analisis kendaraan · {detectionCameraLabel}</p><h2 id="detection-title">Jalankan deteksi</h2><p>Video yang sudah dianalisis akan tampil langsung di layar. Tutup tampilan untuk menghentikan proses.</p></div>
               </div>
               <div className="detection-actions">
+                <div className="camera-selector detection-camera-selector" role="group" aria-label="Pilih kamera deteksi">
+                  {DETECTION_CAMERAS.map((camera) => <button key={camera.id} type="button" className={detectionCameraId === camera.id ? "active" : undefined} aria-label={`Deteksi ${camera.label}`} aria-pressed={detectionCameraId === camera.id} disabled={detectionViewerOpen} onClick={() => setDetectionCameraId(camera.id)}>{camera.label}</button>)}
+                </div>
                 <button className="run-button" type="button" onClick={startDetection} disabled={detectionViewerOpen}>
                   <Icon name="play" /> Jalankan deteksi kendaraan
                 </button>
@@ -201,7 +209,7 @@ export function EdgeWorkspace() {
                 {frameFailed && <div className="frame-badge warning">Frame langsung belum tersedia</div>}
               </div>
               <dl className="camera-details"><div><dt>Sumber</dt><dd>{selectedCamera.label}</dd></div><div><dt>Alamat</dt><dd>{selectedCamera.ip}</dd></div></dl>
-              <div className="result-source"><Icon name="camera" /> Diperbarui otomatis setiap 30 detik · deteksi hanya Kamera 1</div>
+              <div className="result-source"><Icon name="camera" /> Diperbarui otomatis setiap 30 detik · deteksi Kamera 1 dan 2</div>
               <button className="camera-live-button" type="button" onClick={() => { setViewerOpen(true); selectLiveMode(); }}><Icon name="video" /> Buka Real-Time Cam · {selectedCamera.label}</button>
             </section>
 
@@ -256,13 +264,13 @@ export function EdgeWorkspace() {
 
       {detectionViewerOpen && (
         <section className="camera-viewer detection-viewer" role="dialog" aria-modal="true" aria-labelledby="detection-viewer-title">
-          <header className="camera-viewer-header"><div className="viewer-camera-name"><Image className="viewer-device-photo" src="/vehicle-detection.svg" width={44} height={44} alt="Ilustrasi deteksi kendaraan" unoptimized /><div><span>Analisis kamera 01</span><h2 id="detection-viewer-title">Deteksi kendaraan</h2></div></div><div className="viewer-controls">{detectionRunning && !detectionLoading && !detectionFailed && <span className="detection-running-status"><StatusDot /> Berjalan di Jetson</span>}<button className="viewer-close" type="button" onClick={closeDetectionViewer} aria-label="Tutup deteksi"><Icon name="x" /></button></div></header>
+          <header className="camera-viewer-header"><div className="viewer-camera-name"><Image className="viewer-device-photo" src="/vehicle-detection.svg" width={44} height={44} alt="Ilustrasi deteksi kendaraan" unoptimized /><div><span>Analisis · {detectionCameraLabel}</span><h2 id="detection-viewer-title">Deteksi kendaraan</h2></div></div><div className="viewer-controls">{detectionRunning && !detectionLoading && !detectionFailed && <span className="detection-running-status"><StatusDot /> Berjalan di Jetson</span>}<button className="viewer-close" type="button" onClick={closeDetectionViewer} aria-label="Tutup deteksi"><Icon name="x" /></button></div></header>
           <div className="camera-viewer-stage">{detectionRunning ? (
             <div className="viewer-media detection-media">
               {!detectionFailed && (
                 // MJPEG streaming requires an unoptimized native image element.
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={getDetectionLiveUrl(DETECTION_SCRIPT, detectionSession)} alt="Deteksi kendaraan langsung" onLoad={() => setDetectionLoading(false)} onError={() => { setDetectionLoading(false); setDetectionFailed(true); }} />
+                <img key={`${detectionCameraId}-${detectionSession}`} src={getDetectionLiveUrl(detectionCameraId, detectionSession)} alt="Deteksi kendaraan langsung" onLoad={() => setDetectionLoading(false)} onError={() => { setDetectionLoading(false); setDetectionFailed(true); }} />
               )}
               {detectionLoading && <div className="viewer-media-state"><Icon name="refresh" className="spinning" /><strong>Memuat model dan memulai deteksi…</strong><span>Proses pertama pada Jetson dapat memerlukan lebih dari satu menit.</span></div>}
               {detectionFailed && <div className="viewer-media-state error"><Icon name="x" /><strong>Deteksi tidak dapat dijalankan</strong><span>Pastikan kamera tersedia dan tidak ada proses deteksi lain yang sedang aktif.</span><button type="button" onClick={stopDetection}>Kembali</button></div>}

@@ -10,7 +10,7 @@ const steps = [
     target: "tour-detection",
     eyebrow: "Petunjuk 1 dari 3",
     title: "Jalankan deteksi",
-    body: "Klik Jalankan deteksi kendaraan untuk melihat hasil analisis Kamera 1. Kamera 2 dan 3 belum digunakan untuk deteksi.",
+    body: "Pilih Kamera 1 atau Kamera 2, lalu klik Jalankan deteksi kendaraan. Hanya satu proses dapat berjalan; Kamera 3 belum digunakan untuk deteksi.",
   },
   {
     target: "tour-camera",

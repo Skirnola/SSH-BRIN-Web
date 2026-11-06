@@ -87,8 +87,10 @@ export async function getDetectionScripts(): Promise<string[]> {
   return response.json() as Promise<string[]>;
 }
 
-export function getDetectionLiveUrl(script: string, session: number): string {
-  const query = new URLSearchParams({ script, session: String(session) });
+export type DetectionCameraId = "camera-1" | "camera-2";
+
+export function getDetectionLiveUrl(cameraId: DetectionCameraId, session: number): string {
+  const query = new URLSearchParams({ camera_id: cameraId, session: String(session) });
   return `${API_URL}/api/v1/detection/live?${query.toString()}`;
 }
 

@@ -11,7 +11,7 @@ from fastapi.responses import StreamingResponse
 from .auth import AuthenticatedUser, LoginRequest, REFRESH_COOKIE, SESSION_COOKIE, authenticate_with_firebase, require_authenticated_user, set_session_cookies
 from .cameras import CameraTarget, get_camera_target
 from .config import Settings, get_settings
-from .detection import list_detection_scripts, stream_detection_mjpeg, validate_detection_script
+from .detection import get_detection_target, list_detection_scripts, stream_detection_mjpeg
 from .jetson import check_connection, get_cached_camera_frame, get_system_health, list_directory, read_text_file, refresh_camera_frame, stream_camera_mjpeg
 from .models import ConnectionHealth, DirectoryListing, FileContent, SystemHealth
 
@@ -305,31 +305,36 @@ async def detection_scripts() -> list[str]:
 
 @app.get("/api/v1/detection/live", dependencies=[Depends(require_authenticated_user)])
 async def detection_live(
-    script: str = Query(min_length=1, max_length=120),
+    camera_id: str = Query(default="camera-1", min_length=1, max_length=24),
+    script: str | None = Query(default=None, min_length=1, max_length=120),
     config: Settings = Depends(get_settings),
 ) -> StreamingResponse:
     global _active_detection
     try:
-        script = validate_detection_script(script)
+        target = get_detection_target(camera_id)
+        # Retain the old Camera 1 URL without allowing arbitrary scripts or argv.
+        if script is not None and script != target.script:
+            raise ValueError("Script deteksi tidak sesuai kamera")
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(error)) from error
 
     async with _detection_lock:
         if _active_detection is not None:
+            active = get_detection_target(_active_detection)
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Deteksi {_active_detection} sedang berjalan",
+                detail=f"Deteksi {active.label} sedang berjalan",
             )
-        _active_detection = script
+        _active_detection = target.camera_id
 
     async def generate_detection():
         global _active_detection
         try:
-            async for chunk in stream_detection_mjpeg(config, script):
+            async for chunk in stream_detection_mjpeg(config, target.camera_id):
                 yield chunk
         finally:
             async with _detection_lock:
-                if _active_detection == script:
+                if _active_detection == target.camera_id:
                     _active_detection = None
 
     return StreamingResponse(
@@ -339,6 +344,6 @@ async def detection_live(
             "Cache-Control": "no-store, no-cache, must-revalidate",
             "Pragma": "no-cache",
             "X-Accel-Buffering": "no",
-            "X-Detection-Script": script,
+            "X-Camera-Id": target.camera_id,
         },
     )

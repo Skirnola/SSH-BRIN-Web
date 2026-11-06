@@ -304,6 +304,8 @@ svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-lineca
 .camera-selector button[data-status="offline"] .status-dot { background: var(--brin-red); }
 .camera-selector button[data-status="unknown"] .status-dot { background: #a6b2b8; }
 .camera-selector small { padding: 2px 4px; border-radius: 4px; color: #6f5818; background: #fff0c8; font-size: 7px; letter-spacing: .04em; text-transform: uppercase; }
+.detection-camera-selector { width: 100%; grid-template-columns: repeat(2, 1fr); margin: 0; }
+.detection-camera-selector button:disabled { cursor: not-allowed; opacity: .65; }
 .camera-health-metrics dd.offline { color: #a23c35; }
 .expand-button { color: var(--brin-blue); background: #f3f8fb; }
 .camera-frame { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: 7px; background: #dfe7e8; }

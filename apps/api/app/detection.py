@@ -1,5 +1,6 @@
 import asyncio
 import json
+from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import AsyncIterator
 
@@ -8,8 +9,29 @@ import asyncssh
 from .config import Settings
 from .jetson import connect, encoded_python_command
 
-DETECTION_SCRIPT = "Test19Agus_optimized_fps_big_ui.py"
-DETECTION_SCRIPTS = (DETECTION_SCRIPT,)
+
+@dataclass(frozen=True)
+class DetectionTarget:
+    camera_id: str
+    label: str
+    script: str
+    args: tuple[str, ...] = ()
+
+
+# Script names and argv are trusted server constants, never client-supplied commands.
+DETECTION_TARGETS = (
+    DetectionTarget("camera-1", "Kamera 1", "Test19Agus_optimized_fps_big_ui.py"),
+    DetectionTarget("camera-2", "Kamera 2", "test.py", ("2",)),
+)
+DETECTION_SCRIPTS = tuple(target.script for target in DETECTION_TARGETS)
+
+
+def get_detection_target(camera_id: str) -> DetectionTarget:
+    for target in DETECTION_TARGETS:
+        if target.camera_id == camera_id:
+            return target
+    raise ValueError("Deteksi hanya tersedia untuk Kamera 1 dan Kamera 2")
+
 
 DETECTION_WRAPPER = r'''
 import json, os, runpy, sys, time
@@ -67,6 +89,7 @@ cv2.setWindowProperty = lambda *_args, **_kwargs: None
 cv2.destroyAllWindows = lambda: None
 
 os.chdir(workspace)
+sys.argv = [script_path, *config["args"]]
 runpy.run_path(script_path, run_name="__main__")
 '''
 
@@ -81,11 +104,11 @@ def validate_detection_script(script: str) -> str:
     return script
 
 
-async def stream_detection_mjpeg(settings: Settings, script: str) -> AsyncIterator[bytes]:
-    script = validate_detection_script(script)
-    remote_path = str(PurePosixPath(settings.jetson_workspace) / script)
+async def stream_detection_mjpeg(settings: Settings, camera_id: str) -> AsyncIterator[bytes]:
+    target = get_detection_target(camera_id)
+    remote_path = str(PurePosixPath(settings.jetson_workspace) / target.script)
     payload = json.dumps(
-        {"workspace": settings.jetson_workspace, "script": script}
+        {"workspace": settings.jetson_workspace, "script": target.script, "args": target.args}
     ).encode()
 
     async with connect(settings) as connection:

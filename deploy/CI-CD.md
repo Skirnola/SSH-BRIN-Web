@@ -206,15 +206,17 @@ Before deploying this release:
 2. Confirm the approved script exists on the Jetson host:
 
    ```bash
-   test -f '/home/jetson/BRIN RI NDIP/Test19Agus_optimized_fps_big_ui.py' && echo SCRIPT_OK
+   test -f '/home/jetson/BRIN RI NDIP/Test19Agus_optimized_fps_big_ui.py' && echo CAMERA_1_SCRIPT_OK
+   test -f '/home/jetson/BRIN RI NDIP/test.py' && echo CAMERA_2_SCRIPT_OK
+   test -f '/home/jetson/BRIN RI NDIP/A_Mobil_Positions/mobil_positions_cam_2.pkl' && echo CAMERA_2_MASK_OK
    test -x /home/jetson/yolo-env/bin/python && echo PYTHON_OK
    ```
 
-   Detection runs the host's copy of this script, not a copy bundled in the web image. It remains restricted to Kamera 1; Kamera 2 and 3 provide snapshot/live viewing only. Confirm the host script's Kamera 1 target and model paths separately: dashboard camera settings do not rewrite addresses embedded in the detection script. Running detection may write to Firebase; test it intentionally.
+   Detection runs host scripts, not copies bundled in the web image. Kamera 1 retains `Test19Agus_optimized_fps_big_ui.py`; Kamera 2 uses the reviewed multi-camera detector `test.py` with the fixed argument `2` (without it, that script defaults to Kamera 1). The backend accepts allowlisted camera IDs, never arbitrary filenames or command arguments. Kamera 3 remains snapshot/live viewing only. Confirm host camera targets, model, and mask paths separately: dashboard settings do not rewrite detection scripts. Kamera 2 uses `A_Mobil_Positions/mobil_positions_cam_2.pkl`, `slot_parking_cam2`, and `slot_history_cam2`. The mask editors `Mobil_Pos_cam2.py` and `mobil_positioning_2point_line_2.py` are not executable through the website. Running detection may write to Firebase; test it intentionally.
 
 3. Push or merge the release into `main`. A push to `development` runs quality checks only; it does not update the live website. A push to `main` publishes images and deploys only when `ENABLE_JETSON_DEPLOY=true`, a matching runner is online, and any `jetson-production` environment approval is granted. Otherwise use the manual workflow dispatch described above.
 
-4. After deployment, confirm all three panels appear together, with no sidebar. Switch through Cameras 1, 2, and 3 in snapshot and Real-Time Cam modes; verify that only Kamera 1 is marked for detection. Check device metrics, logout, and the updated tutorial. Intentionally start one detection session, then stop or close it and verify the host process exits. Do not treat the basic HTTP health check as proof that camera or detection hardware works.
+4. After deployment, confirm all three panels appear together, with no sidebar. Switch through Cameras 1, 2, and 3 in snapshot and Real-Time Cam modes; verify that only Kamera 1 and 2 are marked for detection. The detection panel has its own camera selector; changing the monitoring feed must not silently change the detector. Check device metrics, logout, and the updated tutorial. Intentionally test each detector one at a time, then stop or close it and verify the host process exits. Confirm Camera 2 updates only its own Firebase paths. Do not treat the basic HTTP health check as proof that camera or detection hardware works.
 
 ## 7. Normal release workflow
 
